@@ -221,8 +221,8 @@ header .spacer{flex:1}
 /* 路網圖例（右上空白區，輕度縮放補償） */
 #g-legend{pointer-events:none}
 #g-legend .legend-bg{fill:var(--card); fill-opacity:.92; stroke:var(--hairline); stroke-width:1.5}
-#g-legend text{font-family:var(--font-sans); fill:var(--ink); font-size:27px}
-#g-legend .legend-title{fill:var(--ink-2); font-size:22px; font-weight:600; letter-spacing:.15em}
+#g-legend text{font-family:var(--font-sans); fill:var(--ink); font-size:19px}
+#g-legend .legend-title{fill:var(--ink-2); font-size:14px; font-weight:600; letter-spacing:.15em}
 #map.intro #g-legend{opacity:0; animation:fade-in .6s ease forwards; animation-delay:1.15s}
 
 /* Label 三級 LOD（依縮放層級，由 Camera 切 data-lod；抽中站永遠顯示） */
@@ -1110,35 +1110,35 @@ function renderMap(){
 const LEGEND_ANCHOR = [1465, -55];
 function buildLegend(){
   const gL = document.getElementById('g-legend');
-  const W = 450, PAD = 22, ROW = 38, COL = 212;
+  const W = 320, PAD = 16, ROW = 27, COL = 150;
   const col1 = LINES.slice(0, 5), col2 = LINES.slice(5);
-  const H = 46 + Math.max(col1.length, col2.length) * ROW + ROW + PAD;
-  gL.appendChild(el('rect', {class:'legend-bg', x:-W, y:0, width:W, height:H, rx:16}));
-  const title = el('text', {class:'legend-title', x:-W + PAD, y:36});
+  const H = 34 + Math.max(col1.length, col2.length) * ROW + ROW + PAD;
+  gL.appendChild(el('rect', {class:'legend-bg', x:-W, y:0, width:W, height:H, rx:12}));
+  const title = el('text', {class:'legend-title', x:-W + PAD, y:26});
   title.textContent = '路線圖例';
   gL.appendChild(title);
   const entry = (line, cx, cy) => {
-    gL.appendChild(el('line', {x1:cx, y1:cy, x2:cx + 44, y2:cy,
-      stroke:`var(--line-${line.id})`, 'stroke-width':10, 'stroke-linecap':'round'}));
-    const t = el('text', {x:cx + 56, y:cy, dy:'0.36em'});
+    gL.appendChild(el('line', {x1:cx, y1:cy, x2:cx + 32, y2:cy,
+      stroke:`var(--line-${line.id})`, 'stroke-width':7, 'stroke-linecap':'round'}));
+    const t = el('text', {x:cx + 42, y:cy, dy:'0.36em'});
     t.textContent = line.name;
     gL.appendChild(t);
   };
-  col1.forEach((l, i) => entry(l, -W + PAD, 66 + i * ROW));
-  col2.forEach((l, i) => entry(l, -W + PAD + COL, 66 + i * ROW));
+  col1.forEach((l, i) => entry(l, -W + PAD, 48 + i * ROW));
+  col2.forEach((l, i) => entry(l, -W + PAD + COL, 48 + i * ROW));
   // 符號說明：轉乘站＋已探訪章
-  const sy = 66 + 5 * ROW;
-  gL.appendChild(el('circle', {cx:-W + PAD + 20, cy:sy, r:10, fill:'#fff', stroke:'var(--ink)', 'stroke-width':3.5}));
-  const t1 = el('text', {x:-W + PAD + 56, y:sy, dy:'0.36em'});
+  const sy = 48 + 5 * ROW;
+  gL.appendChild(el('circle', {cx:-W + PAD + 14, cy:sy, r:7, fill:'#fff', stroke:'var(--ink)', 'stroke-width':2.5}));
+  const t1 = el('text', {x:-W + PAD + 42, y:sy, dy:'0.36em'});
   t1.textContent = '轉乘站';
   gL.appendChild(t1);
-  const st = el('g', {class:'stamp', transform:`translate(${-W + PAD + COL + 20} ${sy}) rotate(-12)`});
-  st.appendChild(el('circle', {r:10}));
-  const ck = el('text', {dy:'0.36em', 'text-anchor':'middle'});
+  const st = el('g', {class:'stamp', transform:`translate(${-W + PAD + COL + 14} ${sy}) rotate(-12)`});
+  st.appendChild(el('circle', {r:7}));
+  const ck = el('text', {dy:'0.36em', 'text-anchor':'middle', style:'font-size:9px'});
   ck.textContent = '✓';
   st.appendChild(ck);
   gL.appendChild(st);
-  const t2 = el('text', {x:-W + PAD + COL + 56, y:sy, dy:'0.36em'});
+  const t2 = el('text', {x:-W + PAD + COL + 42, y:sy, dy:'0.36em'});
   t2.textContent = '已探訪';
   gL.appendChild(t2);
   updateLegendScale();
