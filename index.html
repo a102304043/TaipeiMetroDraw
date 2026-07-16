@@ -403,17 +403,19 @@ header .spacer{flex:1}
 .panel-foot .mission{margin:0 0 10px}
 .panel.sheet .body{padding-bottom:12px}
 
-/* 重新對焦浮動鈕 */
-#refocus{
+/* 地圖浮動鈕：⌖ 回抽選結果／⛶ 看全路網 */
+#refocus, #overview{
   position:fixed; right:16px;
-  bottom:calc(128px + env(safe-area-inset-bottom));
   z-index:25;
   width:44px;height:44px; border:none; border-radius:12px;
   background:var(--card); color:var(--ink); box-shadow:var(--shadow);
   font-size:1.375rem; cursor:pointer;
   touch-action:manipulation;
 }
-#refocus:active{transform:scale(.94)}
+#refocus{bottom:calc(128px + env(safe-area-inset-bottom))}
+#overview{bottom:calc(180px + env(safe-area-inset-bottom)); font-size:1.125rem}
+#refocus:active, #overview:active{transform:scale(.94)}
+body.intro #overview{opacity:0}
 
 /* ============================================================
    §CSS-9 開場動畫與面板增潤
@@ -540,7 +542,8 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
   </g>
 </svg>
 
-<button id="refocus" aria-label="重新對焦" title="重新對焦">⌖</button>
+<button id="overview" aria-label="看整張路網圖" title="看整張路網圖">⛶</button>
+<button id="refocus" aria-label="回到抽選結果" title="回到抽選結果">⌖</button>
 
 <div id="ceremony" aria-hidden="true">
   <div id="slot">
@@ -1189,7 +1192,7 @@ const Camera = (() => {
   function focusBBox(bbox, opts = {}){ animateTo(fitBBox(bbox, opts), opts.duration ?? 650); }
   function focusContent(duration){
     measure();
-    animateTo(fitBBox(contentBBox()), duration);
+    animateTo(fitBBox(contentBBox(), {remember:false}), duration);
   }
   function refocus(){
     measure();
@@ -1836,7 +1839,7 @@ const TOUR_STEPS = [
   {t:'🎲 開抽！', target:'#draw-btn', boost:'#sheet',
    p:'按下大按鈕：先隨機抽一條線，再從線上抽出三個站——今天的行程交給命運決定。動畫太久？點畫面任意處直接看結果。'},
   {t:'🗺️ 路網圖就是舞台', target:'#refocus', boost:'#refocus',
-   p:'地圖可以雙指縮放、單指拖曳。點任何一個站，會打開它的介紹卡：照片、簡介、今日探訪任務與導航。迷路了就按 ⌖ 回到抽選結果。'},
+   p:'地圖可以雙指縮放、單指拖曳。點任何一個站，會打開它的介紹卡：照片、簡介、今日探訪任務與導航。⌖ 回到抽選結果、⛶ 看整張路網圖。'},
   {t:'🕘 收集你的足跡', target:'#btn-history', boost:'header',
    p:'每次抽選都記在歷史裡；去過的站標記「已探訪」，慢慢收集全部 169 站。⚙️ 設定可以換主題、排除去過的站或機捷桃園段。'},
 ];
@@ -2227,8 +2230,30 @@ function landingView(instant){
   setTimeout(() => finish(false), 2150);
 })();
 
-document.getElementById('refocus').addEventListener('click', () => Camera.refocus());
+/* ⌖ 回抽選結果（重新高亮該線）；⛶ 恢復全部線色並看整張路網 */
+document.getElementById('refocus').addEventListener('click', () => {
+  if (currentResult){
+    const line = LINES.find(l => l.id === currentResult.lineId);
+    setDims(line.id);
+    semiDimUnpicked(line, currentResult.stationIds);
+    Camera.focusBBox(resultBBox(line, currentResult.stationIds));
+  } else {
+    Camera.refocus();
+  }
+});
+document.getElementById('overview').addEventListener('click', () => {
+  dimAll(false);
+  for (const t of gLabels.querySelectorAll('.lbl.semi')) t.classList.remove('semi');
+  Camera.focusContent(650);
+});
 drawBtn.addEventListener('click', runCeremony);
+
+/* 浮動鈕貼齊結果面板頂端（面板長高時不被蓋住） */
+new ResizeObserver(() => {
+  const h = document.getElementById('sheet').getBoundingClientRect().height;
+  document.getElementById('refocus').style.bottom = (h + 12) + 'px';
+  document.getElementById('overview').style.bottom = (h + 64) + 'px';
+}).observe(document.getElementById('sheet'));
 document.getElementById('btn-history').addEventListener('click', () => { renderHistory(); openPanel(panelHistory); });
 document.getElementById('btn-settings').addEventListener('click', () => { syncSettingsUI(); openPanel(panelSettings); });
 
