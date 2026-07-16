@@ -128,8 +128,8 @@ header .spacer{flex:1}
 #ceremony{
   position:fixed; inset:0; z-index:40;
   display:none; flex-direction:column; align-items:center; justify-content:center;
-  background:color-mix(in srgb, var(--surface) 60%, transparent);
-  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  background:color-mix(in srgb, var(--surface) 78%, transparent);
+  /* 不用 backdrop-filter：手機上成本高，且移除瞬間的大重繪會撞上鏡頭動畫起步 */
 }
 #ceremony.show{display:flex}
 #slot{display:flex; flex-direction:column; gap:10px; align-items:center}
@@ -152,14 +152,22 @@ header .spacer{flex:1}
   color:var(--ink-2); font-size:.875rem;
 }
 @media (prefers-reduced-motion: reduce){
-  #ceremony{backdrop-filter:none; -webkit-backdrop-filter:none}
   .capsule{transition:none}
 }
 
-/* 地圖 dim 與釘選高亮 */
-#map .line.dimmed, #map .dot.dimmed, #map .lbl.dimmed{opacity:.15; transition:opacity .3s ease}
+/* 地圖 dim 與釘選高亮
+   （transition 只給 10 條線 path——站點/label 數量大，同步補間會在手機掉幀） */
+#map .line.dimmed{opacity:.15; transition:opacity .3s ease}
+#map .dot.dimmed, #map .lbl.dimmed{opacity:.15}
 #map .lbl.semi{opacity:.4}
 #map .lbl.picked{font-weight:800; font-size:17px}
+
+/* Label 三級 LOD（依縮放層級，由 Camera 切 data-lod；抽中站永遠顯示） */
+#g-labels text{text-rendering:optimizeSpeed}
+#map[data-lod="0"] .lbl{display:none}
+#map[data-lod="1"] .lbl{display:none}
+#map[data-lod="1"] .lbl.tA{display:inline}
+#map .lbl.picked{display:inline !important}
 #hop-dot{fill:var(--ink); stroke:var(--card); stroke-width:2}
 .pin-pop{
   transform-box:fill-box; transform-origin:center;
@@ -172,7 +180,8 @@ header .spacer{flex:1}
 .pin .pulse{
   fill:none; stroke-width:4;
   transform-box:fill-box; transform-origin:center;
-  animation:pulse 1.6s ease-out infinite;
+  animation:pulse 1.6s ease-out 5;   /* 5 次後停，避免落定後持續重繪 */
+  opacity:0;
 }
 @keyframes pulse{from{transform:scale(1); opacity:.9} to{transform:scale(2.8); opacity:0}}
 @media (prefers-reduced-motion: reduce){
@@ -667,6 +676,12 @@ for (const line of LINES){
   }
 }
 for (const s of STATIONS) s.isTransfer = (s.lines?.length ?? 0) > 1;
+// 端點站（各 segment 首尾）：中距離 LOD 時與轉乘站一同顯示站名
+for (const line of LINES)
+  for (const seg of line.segments){
+    const ids = seg.filter(p => typeof p === 'string');
+    if (ids.length){ S[ids[0]].isTerminal = true; S[ids[ids.length-1]].isTerminal = true; }
+  }
 for (const [lid, n] of Object.entries(EXPECTED_COUNTS)){
   const line = LINES.find(l => l.id === lid);
   console.assert(line && line.stationIds.length === n,
@@ -785,7 +800,8 @@ function renderMap(){
     const d = DIRS[s.dir] ?? DIRS.E;
     const o = s.isTransfer ? 18 : 14;
     const t = el('text', {
-      class: 'lbl' + (s.isTransfer ? ' transfer' : ''),
+      class: 'lbl' + (s.isTransfer ? ' transfer' : '')
+                   + (s.isTransfer || s.isTerminal ? ' tA' : ''),
       x: s.x + d.ox*o, y: s.y + d.oy*o,
       dy: d.dy, 'text-anchor': d.anchor,
       'data-id': s.id,
@@ -842,9 +858,14 @@ const Camera = (() => {
     cx = Math.min(Math.max(cx, bounds.x), bounds.x + bounds.w);
     cy = Math.min(Math.max(cy, bounds.y), bounds.y + bounds.h);
   }
+  /* Label LOD：0=無 label、1=轉乘＋端點、2=全部；動畫期間鎖定目標層級 */
+  const lodTier = s => s < 0.45 ? 0 : s < 0.85 ? 1 : 2;
+  let lodLock = null;
   function apply(){
     const vw = svgW/scale, vh = svgH/scale;
     svg.setAttribute('viewBox', `${cx - vw/2} ${cy - vh/2} ${vw} ${vh}`);
+    const tier = String(lodLock ?? lodTier(scale));
+    if (svg.dataset.lod !== tier) svg.dataset.lod = tier;
     svg.dispatchEvent(new Event('camerachange'));
   }
 
@@ -873,6 +894,7 @@ const Camera = (() => {
     if (reduceMotion.matches || duration <= 0){
       ({cx, cy, scale} = target); clampState(); apply(); return;
     }
+    lodLock = lodTier(target.scale);   // 動畫全程鎖定目標 LOD，避免中途切換與過量 label 重繪
     const from = {cx, cy, scale};
     const lnS0 = Math.log(from.scale), lnS1 = Math.log(target.scale);
     const t0 = performance.now();
@@ -882,12 +904,14 @@ const Camera = (() => {
       cy = from.cy + (target.cy - from.cy)*e;
       scale = Math.exp(lnS0 + (lnS1 - lnS0)*e);   // log 空間插值，縮放感受均速
       clampState(); apply();
-      anim = t < 1 ? requestAnimationFrame(step) : null;
+      if (t < 1) anim = requestAnimationFrame(step);
+      else { anim = null; lodLock = null; }
     };
     anim = requestAnimationFrame(step);
   }
   function cancelAnim(){
     if (anim){ cancelAnimationFrame(anim); anim = null; }
+    lodLock = null;
   }
 
   function focusBBox(bbox, opts = {}){ animateTo(fitBBox(bbox, opts), opts.duration ?? 650); }
