@@ -218,6 +218,12 @@ header .spacer{flex:1}
 .stamp{pointer-events:none}
 .stamp circle{fill:var(--card); fill-opacity:.6; stroke:var(--stamp); stroke-width:2}
 .stamp text{fill:var(--stamp); font-weight:800; font-size:12px; font-family:var(--font-sans)}
+/* 路網圖例（右上空白區，輕度縮放補償） */
+#g-legend{pointer-events:none}
+#g-legend .legend-bg{fill:var(--card); fill-opacity:.92; stroke:var(--hairline); stroke-width:1.5}
+#g-legend text{font-family:var(--font-sans); fill:var(--ink); font-size:27px}
+#g-legend .legend-title{fill:var(--ink-2); font-size:22px; font-weight:600; letter-spacing:.15em}
+#map.intro #g-legend{opacity:0; animation:fade-in .6s ease forwards; animation-delay:1.15s}
 
 /* Label 三級 LOD（依縮放層級，由 Camera 切 data-lod；抽中站永遠顯示） */
 #g-labels text{text-rendering:optimizeSpeed}
@@ -551,6 +557,7 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
     <g id="g-visited"></g>
     <g id="g-highlight"></g>
     <g id="g-labels"></g>
+    <g id="g-legend"></g>
     <g id="g-debug"></g>
   </g>
 </svg>
@@ -1098,6 +1105,49 @@ function renderMap(){
   }
 }
 
+/* 路網圖例：錨定右上空白區 (1465,-55)，往左下排版；zoom 遠時輕度放大維持可讀 */
+const LEGEND_ANCHOR = [1465, -55];
+function buildLegend(){
+  const gL = document.getElementById('g-legend');
+  const W = 450, PAD = 22, ROW = 38, COL = 212;
+  const col1 = LINES.slice(0, 5), col2 = LINES.slice(5);
+  const H = 46 + Math.max(col1.length, col2.length) * ROW + ROW + PAD;
+  gL.appendChild(el('rect', {class:'legend-bg', x:-W, y:0, width:W, height:H, rx:16}));
+  const title = el('text', {class:'legend-title', x:-W + PAD, y:36});
+  title.textContent = '路線圖例';
+  gL.appendChild(title);
+  const entry = (line, cx, cy) => {
+    gL.appendChild(el('line', {x1:cx, y1:cy, x2:cx + 44, y2:cy,
+      stroke:`var(--line-${line.id})`, 'stroke-width':10, 'stroke-linecap':'round'}));
+    const t = el('text', {x:cx + 56, y:cy, dy:'0.36em'});
+    t.textContent = line.name;
+    gL.appendChild(t);
+  };
+  col1.forEach((l, i) => entry(l, -W + PAD, 66 + i * ROW));
+  col2.forEach((l, i) => entry(l, -W + PAD + COL, 66 + i * ROW));
+  // 符號說明：轉乘站＋已探訪章
+  const sy = 66 + 5 * ROW;
+  gL.appendChild(el('circle', {cx:-W + PAD + 20, cy:sy, r:10, fill:'#fff', stroke:'var(--ink)', 'stroke-width':3.5}));
+  const t1 = el('text', {x:-W + PAD + 56, y:sy, dy:'0.36em'});
+  t1.textContent = '轉乘站';
+  gL.appendChild(t1);
+  const st = el('g', {class:'stamp', transform:`translate(${-W + PAD + COL + 20} ${sy}) rotate(-12)`});
+  st.appendChild(el('circle', {r:10}));
+  const ck = el('text', {dy:'0.36em', 'text-anchor':'middle'});
+  ck.textContent = '✓';
+  st.appendChild(ck);
+  gL.appendChild(st);
+  const t2 = el('text', {x:-W + PAD + COL + 56, y:sy, dy:'0.36em'});
+  t2.textContent = '已探訪';
+  gL.appendChild(t2);
+  updateLegendScale();
+}
+function updateLegendScale(){
+  const f = Math.min(1.5, Math.max(1, 1/Camera.getScale()));
+  document.getElementById('g-legend')
+    .setAttribute('transform', `translate(${LEGEND_ANCHOR[0]} ${LEGEND_ANCHOR[1]}) scale(${f})`);
+}
+
 function contentBBox(){
   let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
   for (const line of LINES)
@@ -1483,6 +1533,7 @@ function updatePinScale(){
   const fs = stampScaleFactor();
   for (const g of gVisited.children)
     g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${fs}) rotate(-12)`);
+  updateLegendScale();
 }
 svg.addEventListener('camerachange', updatePinScale);
 
@@ -2206,6 +2257,7 @@ Camera.onTap((x, y) => {
 applyMode();
 renderMap();
 Camera.init();
+buildLegend();
 updateStats();
 syncVisitedMap();
 const DEBUG = new URLSearchParams(location.search).get('debug');
