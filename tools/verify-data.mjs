@@ -32,7 +32,7 @@ const CANON = {
   Y:  [['大坪林','十四張','秀朗橋','景平','景安','中和','橋和','中原','板新','板橋','新埔民生','頭前庄','幸福','新北產業園區']],
   A:  [['台北車站','三重','新北產業園區','新莊副都心','泰山','泰山貴和','體育大學','長庚醫院','林口','山鼻','坑口','機場第一航廈','機場第二航廈','機場旅館','大園','橫山','領航','高鐵桃園站','桃園體育園區','興南','環北','老街溪']],
   V:  [['紅樹林','竿蓁林','淡金鄧公','淡江大學','淡金北新','新市一路','淡水行政中心','濱海義山','濱海沙崙','淡海新市鎮','崁頂'],
-       ['濱海沙崙','台北海洋大學','沙崙','漁人碼頭']],
+       ['濱海沙崙','台北海洋大學','沙崙','淡水漁人碼頭']],
   K:  [['雙城','玫瑰中國城','台北小城','耕莘安康院區','景文科大','安康','陽光運動公園','新和國小','十四張']],
   LB: [['頂埔','媽祖田','長壽山','橫溪','龍埔','三峽','臺北大學','鶯歌車站','陶瓷老街','國華','永吉公園','鶯桃福德']],
 };
@@ -69,7 +69,8 @@ for (const s of STATIONS){
   seen.add(s.id);
   if (s.x % 25 || s.y % 25) err(`${s.name}(${s.id}) 座標未吸附 25 格：(${s.x},${s.y})`);
   const first = Object.values(s.codes)[0];
-  if (first.toLowerCase().replace(/[^a-z0-9]/g,'') !== s.id)
+  const norm = c => c.toLowerCase().replace(/[^a-z0-9]/g,'').replace(/^([a-z]+)0*(\d)/, '$1$2');
+  if (norm(first) !== norm(s.id))
     warn(`${s.name} id「${s.id}」與第一個站碼「${first}」不一致`);
 }
 // 2. 站點座標重複（兩站疊在同一點）
@@ -126,7 +127,8 @@ for (const [na, op, nb] of GEO){
 }
 // 6. 未被任何線引用的站
 const used = new Set(LINES.flatMap(l => l.segments.flat().filter(p => typeof p === 'string')));
-for (const s of STATIONS) if (!used.has(s.id)) warn(`站 ${s.name}(${s.id}) 未被任何線引用`);
+for (const s of STATIONS)
+  if (!used.has(s.id) && s.enabled !== false) warn(`站 ${s.name}(${s.id}) 未被任何線引用`);
 
 /* ============ 總結 ============ */
 const total = STATIONS.length;
