@@ -145,9 +145,22 @@ header .spacer{flex:1}
   box-shadow:var(--shadow);
   padding:12px 16px calc(16px + env(safe-area-inset-bottom));
 }
+#sheet .grip{
+  padding:12px 0 10px; margin:-12px -16px 2px;
+  cursor:grab; touch-action:none;
+}
 #sheet .handle{
   width:40px;height:4px;border-radius:2px;
-  background:var(--hairline); margin:0 auto 12px;
+  background:var(--hairline); margin:0 auto;
+}
+/* 收合：抽選內容摺疊，只留把手＋按鈕＋地圖 */
+#result, #sheet-brief{
+  overflow:hidden; max-height:480px;
+  transition:max-height .3s ease, opacity .25s ease, margin-bottom .3s ease;
+}
+#sheet.collapsed #result,
+#sheet.collapsed #sheet-brief{
+  max-height:0; opacity:0; margin-bottom:0; pointer-events:none;
 }
 #draw-btn{
   display:block; width:100%; min-height:56px;
@@ -435,7 +448,7 @@ header h1 .dots3 i{width:8px; height:8px; border-radius:50%}
   animation-delay:calc(var(--i, 0) * 110ms);
 }
 @keyframes draw-in{to{stroke-dashoffset:0}}
-#map.intro #g-stations, #map.intro #g-labels{
+#map.intro #g-stations, #map.intro #g-labels, #map.intro #g-visited{
   opacity:0;
   animation:fade-in .6s ease forwards;
   animation-delay:1.15s;
@@ -561,7 +574,7 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
 </div>
 
 <div id="sheet">
-  <div class="handle"></div>
+  <div class="grip" id="sheet-grip" aria-label="收合／展開面板"><div class="handle"></div></div>
   <div id="sheet-brief">
     <p class="hint">今天去哪？<b>先抽一條線，再抽三個站</b>，交給命運決定！</p>
     <p class="stats" id="sheet-stats"></p>
@@ -1570,6 +1583,7 @@ async function runCeremony(){
 
   ceremonyActive = true; skipped = false;
   drawBtn.disabled = true;
+  document.getElementById('sheet').classList.remove('collapsed');   // 重新開抽自動展開
   dismissMapHint(false);
   Sound.ensure();   // 在使用者手勢中建立/喚醒 AudioContext（iOS 限制）
   clearResultRow(); clearPins(); dimAll(true);
@@ -2254,6 +2268,29 @@ new ResizeObserver(() => {
   document.getElementById('refocus').style.bottom = (h + 12) + 'px';
   document.getElementById('overview').style.bottom = (h + 64) + 'px';
 }).observe(document.getElementById('sheet'));
+
+/* 結果面板拖曳收合：把手下拖收起、上拖展開、輕點切換 */
+{
+  const sheetEl = document.getElementById('sheet');
+  const grip = document.getElementById('sheet-grip');
+  let gripY = null;
+  grip.addEventListener('pointerdown', e => {
+    gripY = e.clientY;
+    grip.setPointerCapture(e.pointerId);
+  });
+  grip.addEventListener('pointermove', e => {
+    if (gripY === null) return;
+    const dy = e.clientY - gripY;
+    if (dy > 28){ sheetEl.classList.add('collapsed'); gripY = null; }
+    else if (dy < -28){ sheetEl.classList.remove('collapsed'); gripY = null; }
+  });
+  grip.addEventListener('pointerup', e => {
+    if (gripY !== null && Math.abs(e.clientY - gripY) < 8)
+      sheetEl.classList.toggle('collapsed');
+    gripY = null;
+  });
+  grip.addEventListener('pointercancel', () => { gripY = null; });
+}
 document.getElementById('btn-history').addEventListener('click', () => { renderHistory(); openPanel(panelHistory); });
 document.getElementById('btn-settings').addEventListener('click', () => { syncSettingsUI(); openPanel(panelSettings); });
 
