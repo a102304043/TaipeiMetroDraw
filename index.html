@@ -2243,11 +2243,18 @@ async function openStationCard(id){
   }
 }
 
-/* 地圖點站 → 開卡；抽選籤點擊 → 飛過去＋開卡 */
+/* 地圖點站 → 開卡；抽選籤點擊 → 飛過去＋開卡
+   例外：結果面板收合中點「抽中的站」→ 先展開面板（下次點擊才開卡） */
 Camera.onTap((x, y) => {
   if (ceremonyActive) return;
   const g = document.elementFromPoint(x, y)?.closest('.st');
   if (!g) return;
+  const sheetEl = document.getElementById('sheet');
+  if (sheetEl.classList.contains('collapsed') &&
+      currentResult?.stationIds.includes(g.dataset.id)){
+    sheetEl.classList.remove('collapsed');
+    return;
+  }
   openStationCard(g.dataset.id);
   requestAnimationFrame(() => flyToStation(g.dataset.id));
 });
