@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="雙北捷運抽抽抽——先抽一條線，再抽三個站，出發！">
+<meta name="description" content="雙北捷運抽抽抽——抽一條路線、抽三個站，分兩次抽更刺激，出發探訪！">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F7F5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121417">
 <meta property="og:title" content="雙北捷運抽抽抽">
-<meta property="og:description" content="先抽一條線，再抽三個站，出發探訪！北捷＋新北捷＋機捷全路網隨機抽選。">
+<meta property="og:description" content="抽路線、抽三站，兩種抽法分兩次抽！北捷＋新北捷＋機捷全路網隨機探訪。">
 <meta property="og:url" content="https://a102304043.github.io/TaipeiMetroDraw/">
 <meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -162,15 +162,39 @@ header .spacer{flex:1}
 #sheet.collapsed #sheet-brief{
   max-height:0; opacity:0; margin-bottom:0; pointer-events:none;
 }
-#draw-btn{
-  display:block; width:100%; min-height:56px;
+#draw-row{display:flex; gap:10px}
+.draw-btn{
+  flex:1; min-height:56px;
   border:none; border-radius:16px;
-  background:var(--accent); color:#fff;
-  font-family:inherit; font-size:1.25rem; font-weight:800; letter-spacing:.1em;
+  font-family:inherit; font-size:1.125rem; font-weight:800; letter-spacing:.08em;
   cursor:pointer; touch-action:manipulation;
   transition:transform .12s ease;
 }
-#draw-btn:active{transform:scale(.97)}
+.draw-btn:active{transform:scale(.97)}
+.draw-btn:disabled{opacity:.55}
+#draw-line-btn{
+  background:var(--card); color:var(--accent);
+  border:2px solid var(--accent);
+}
+#draw-stations-btn{background:var(--accent); color:#fff}
+/* 路線選擇器 */
+.line-option{
+  display:flex; align-items:center; gap:12px; width:100%;
+  padding:13px 14px; margin-bottom:8px;
+  border:1px solid var(--hairline); border-radius:14px;
+  background:var(--card); color:var(--ink);
+  font-family:inherit; font-size:1.0625rem; font-weight:600;
+  cursor:pointer; touch-action:manipulation; text-align:left;
+}
+.line-option:disabled{opacity:.45}
+.line-option .bar{width:26px; height:10px; border-radius:5px; flex:none}
+.line-option .cnt{margin-left:auto; font-size:.8125rem; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.line-option .last{
+  font-size:.75rem; font-weight:800; color:var(--accent);
+  border:1px solid var(--accent); border-radius:999px; padding:2px 8px;
+}
+/* 抽中路線後的下一步列 */
+#line-next{display:flex; gap:8px; margin-top:10px; margin-bottom:12px}
 
 /* ============================================================
    §CSS-6 抽選儀式
@@ -584,18 +608,33 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
 <div id="sheet">
   <div class="grip" id="sheet-grip" aria-label="收合／展開面板"><div class="handle"></div></div>
   <div id="sheet-brief">
-    <p class="hint">今天去哪？<b>先抽一條線，再抽三個站</b>，交給命運決定！</p>
+    <p class="hint">今天去哪？<b>抽路線鎖定命運，抽三站揭曉目的地</b>——分兩次抽更刺激！</p>
     <p class="stats" id="sheet-stats"></p>
   </div>
   <div id="result" hidden>
     <span class="line-badge" id="result-badge"></span>
     <ol class="picks" id="result-picks"></ol>
+    <div id="line-next" hidden>
+      <button class="sub-btn" id="btn-draw-here">🎲 抽這條線的三站</button>
+      <button class="sub-btn" id="btn-share-line">↗ 分享</button>
+    </div>
     <div id="result-actions">
       <button class="sub-btn" id="btn-visit-all">✓ 標記三站已探訪</button>
       <button class="sub-btn" id="btn-share">↗ 分享</button>
     </div>
   </div>
-  <button id="draw-btn">🎲 開 抽 ！</button>
+  <div id="draw-row">
+    <button class="draw-btn" id="draw-line-btn">🎰 抽 路 線</button>
+    <button class="draw-btn" id="draw-stations-btn">🎲 抽 三 站</button>
+  </div>
+</div>
+
+<div class="panel sheet" id="panel-line" role="dialog" aria-modal="true" aria-label="選擇路線">
+  <div class="panel-head">
+    <h2>🎲 要抽哪條線的三站？</h2><span class="spacer"></span>
+    <button class="icon-btn" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="body" id="line-list"></div>
 </div>
 
 <div class="panel" id="panel-history" role="dialog" aria-modal="true" aria-label="歷史紀錄">
@@ -988,6 +1027,7 @@ const Store = (() => {
   const DEFAULTS = {
     version: 2,
     settings: { excludeVisited:true, excludeTaoyuan:false, skin:'classic', mode:'light', sound:false, vibrate:true, tourDone:false, stationHintDone:false },
+    lastLine: null,
     visited: [],
     history: [],
   };
@@ -1375,18 +1415,24 @@ function eligibleStations(line){
     return true;
   });
 }
-function drawResult(){
+function pickLine(){
   const pool = LINES.filter(l => eligibleStations(l).length >= 3);
-  if (!pool.length) return null;
-  const line = pool[Math.floor(Math.random() * pool.length)];
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+}
+function pickStations(line){
   const ids = eligibleStations(line);
+  if (ids.length < 3) return null;
   for (let i = 0; i < 3; i++){
     const j = i + Math.floor(Math.random() * (ids.length - i));
     [ids[i], ids[j]] = [ids[j], ids[i]];
   }
   const picked = ids.slice(0, 3);
   picked.sort((a, b) => line.stationIds.indexOf(a) - line.stationIds.indexOf(b));
-  return { lineId: line.id, stationIds: picked };
+  return picked;
+}
+function drawResult(){   // 均勻性測試掛鉤
+  const line = pickLine();
+  return line ? { lineId: line.id, stationIds: pickStations(line) } : null;
 }
 
 function lineBBox(line){
@@ -1476,7 +1522,10 @@ const caps = {
   cur:  document.getElementById('cap-cur'),
   next: document.getElementById('cap-next'),
 };
-const drawBtn  = document.getElementById('draw-btn');
+const lineBtn     = document.getElementById('draw-line-btn');
+const stationsBtn = document.getElementById('draw-stations-btn');
+function setDrawBtns(disabled){ lineBtn.disabled = disabled; stationsBtn.disabled = disabled; }
+function sheetExpand(){ document.getElementById('sheet').classList.remove('collapsed'); }
 const resultEl = document.getElementById('result');
 const badgeEl  = document.getElementById('result-badge');
 const picksEl  = document.getElementById('result-picks');
@@ -1597,7 +1646,29 @@ function clearResultRow(){
   resultEl.hidden = true;
   picksEl.innerHTML = '';
   briefEl.hidden = false;
-  drawBtn.textContent = '🎲 開 抽 ！';
+  document.getElementById('line-next').hidden = true;
+  document.getElementById('result-actions').style.display = '';
+}
+/* 只抽了路線的結果面板：鎖定線＋「抽這條線的三站」快捷鈕 */
+function showLineResult(line){
+  briefEl.hidden = true;
+  resultEl.hidden = false;
+  badgeEl.textContent = line.name;
+  badgeEl.style.background = `var(--line-${line.id})`;
+  badgeEl.style.color = `var(--on-${line.id})`;
+  picksEl.innerHTML = '';
+  const li = document.createElement('li');
+  li.className = 'pick-chip in';
+  const code = document.createElement('span');
+  code.className = 'code';
+  code.textContent = `可抽 ${eligibleStations(line).length} 站`;
+  const nm = document.createElement('span');
+  nm.className = 'nm';
+  nm.textContent = '路線鎖定！';
+  li.append(code, nm);
+  picksEl.appendChild(li);
+  document.getElementById('line-next').hidden = false;
+  document.getElementById('result-actions').style.display = 'none';
 }
 function addChip(id, line, k){
   resultEl.hidden = false;
@@ -1630,23 +1701,22 @@ function addChip(id, line, k){
   requestAnimationFrame(() => li.classList.add('in'));
 }
 
-async function runCeremony(){
-  const result = drawResult();
-  if (!result){
+/* 抽法一：只抽路線（老虎機 → 鏡頭帶看整條線 → 鎖定，站留待下次抽） */
+async function runLineCeremony(){
+  if (ceremonyActive) return;
+  const line = pickLine();
+  if (!line){
     toast('沒有可抽的線——排除條件太嚴了，請到設定放寬');
     return;
   }
-  const line = LINES.find(l => l.id === result.lineId);
-
   ceremonyActive = true; skipped = false;
-  drawBtn.disabled = true;
-  document.getElementById('sheet').classList.remove('collapsed');   // 重新開抽自動展開
+  setDrawBtns(true);
+  sheetExpand();
   dismissMapHint(false);
   Sound.ensure();   // 在使用者手勢中建立/喚醒 AudioContext（iOS 限制）
   clearResultRow(); clearPins(); dimAll(true);
   Camera.cancelAnim();
 
-  /* 抽線老虎機 */
   ceremonyEl.classList.add('show');
   caps.cur.classList.remove('landed');
   const seq = rollSequence(line, 13);
@@ -1661,17 +1731,46 @@ async function runCeremony(){
   buzz([30, 40, 30]); Sound.land();
   if (!skipped) await cwait(550);
   ceremonyEl.classList.remove('show');
+  Camera.focusBBox(lineBBox(line), {duration: skipped ? 0 : 800});
 
-  /* 鏡頭推進整條線 */
+  currentResult = null;
+  state.lastLine = line.id;
+  state.history.unshift({ts: Date.now(), line: line.id, stations: []});
+  if (state.history.length > 50) state.history.length = 50;
+  Store.save(state);
+  showLineResult(line);
+  srEl.textContent = `抽中路線：${line.name}，站留待下次抽`;
+  setDrawBtns(false);
+  ceremonyActive = false;
+}
+
+/* 抽法二：從指定路線抽三站（跳過抽線動畫，直接光點跳選） */
+async function runStationCeremony(lineId){
+  if (ceremonyActive) return;
+  const line = LINES.find(l => l.id === lineId);
+  if (!line) return;
+  const picked = pickStations(line);
+  if (!picked){
+    toast(`${line.name}可抽的站不足三個——調整排除設定試試`);
+    return;
+  }
+  ceremonyActive = true; skipped = false;
+  setDrawBtns(true);
+  sheetExpand();
+  dismissMapHint(false);
+  Sound.ensure();
+  clearResultRow(); clearPins(); dimAll(true);
+  Camera.cancelAnim();
+
+  setDims(line.id);
   Camera.focusBBox(lineBBox(line), {duration: skipped ? 0 : 800});
   if (!skipped) await cwait(900);
 
-  /* 光點沿線跳選三站 */
   const onLine = line.stationIds;
   const hop = el('circle', {id:'hop-dot', r:9, cx:S[onLine[0]].x, cy:S[onLine[0]].y});
   gHighlight.appendChild(hop);
   for (let k = 0; k < 3; k++){
-    const targetId = result.stationIds[k];
+    const targetId = picked[k];
     if (!skipped){
       const hops = 6 + k;
       let pos = Math.floor(Math.random() * onLine.length);
@@ -1691,21 +1790,65 @@ async function runCeremony(){
   hop.remove();
   Sound.chord();
 
-  /* 收尾：半透明化未抽中站名、記錄歷史、等 sheet 長高後再 focus 三站框 */
-  semiDimUnpicked(line, result.stationIds);
-  currentResult = result;
-  state.history.unshift({ts: Date.now(), line: line.id, stations: [...result.stationIds]});
+  semiDimUnpicked(line, picked);
+  currentResult = { lineId: line.id, stationIds: picked };
+  state.lastLine = line.id;
+  state.history.unshift({ts: Date.now(), line: line.id, stations: [...picked]});
   if (state.history.length > 50) state.history.length = 50;
   Store.save(state);
-  for (const id of result.stationIds) getWikiData(S[id]);   // 預熱資訊卡快取
-  srEl.textContent = `抽中${line.name}：${result.stationIds.map(id => S[id].name).join('、')}`;
+  for (const id of picked) getWikiData(S[id]);   // 預熱資訊卡快取
+  srEl.textContent = `抽中${line.name}：${picked.map(id => S[id].name).join('、')}`;
   const dur = skipped ? 0 : 700;
   requestAnimationFrame(() => {
-    Camera.focusBBox(resultBBox(line, result.stationIds), {duration: dur});
+    Camera.focusBBox(resultBBox(line, picked), {duration: dur});
   });
-  drawBtn.textContent = '🎲 再 抽 一 次';
-  drawBtn.disabled = false;
+  setDrawBtns(false);
   ceremonyActive = false;
+}
+
+/* 路線選擇器：抽三站前先選線（上次抽中的置頂標星） */
+const panelLine = document.getElementById('panel-line');
+panelLine.querySelector('[data-close]').addEventListener('click', () => {
+  scrim.classList.remove('show');
+  closePanel(panelLine);
+});
+function openLinePicker(){
+  if (ceremonyActive) return;
+  const list = document.getElementById('line-list');
+  list.innerHTML = '';
+  const items = [...LINES];
+  if (state.lastLine){
+    const i = items.findIndex(l => l.id === state.lastLine);
+    if (i > 0) items.unshift(items.splice(i, 1)[0]);
+  }
+  for (const line of items){
+    const n = eligibleStations(line).length;
+    const b = document.createElement('button');
+    b.className = 'line-option';
+    b.disabled = n < 3;
+    const bar = document.createElement('span');
+    bar.className = 'bar';
+    bar.style.background = `var(--line-${line.id})`;
+    b.append(bar, document.createTextNode(line.name));
+    if (line.id === state.lastLine){
+      const tag = document.createElement('span');
+      tag.className = 'last';
+      tag.textContent = '上次抽中';
+      b.append(tag);
+    }
+    const cnt = document.createElement('span');
+    cnt.className = 'cnt';
+    cnt.textContent = n < 3 ? '可抽站不足' : `可抽 ${n} 站`;
+    b.append(cnt);
+    b.addEventListener('click', () => {
+      scrim.classList.remove('show');
+      closePanel(panelLine);
+      setTimeout(() => runStationCeremony(line.id), 260);
+    });
+    list.appendChild(b);
+  }
+  scrim.classList.add('show');
+  openPanel(panelLine);
 }
 
 ceremonyEl.addEventListener('pointerdown', e => { e.preventDefault(); requestSkip(); });
@@ -1778,6 +1921,8 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   for (const p of [panelHistory, panelSettings]) closePanel(p);
   closeStationCard();
+  scrim.classList.remove('show');
+  closePanel(panelLine);
 });
 
 /* --- 歷史紀錄 --- */
@@ -1810,6 +1955,14 @@ function renderHistory(){
       {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false});
     meta.append(badge, date);
     const sts = document.createElement('div'); sts.className = 'h-sts';
+    if (!h.stations.length){
+      const p = document.createElement('span');
+      p.className = 'h-st';
+      p.style.pointerEvents = 'none';
+      p.style.opacity = '.75';
+      p.textContent = '🎰 抽了路線，三站留待下次抽';
+      sts.append(p);
+    }
     for (const id of h.stations){
       const b = document.createElement('button');
       b.className = 'h-st' + (v.has(id) ? ' visited' : '');
@@ -1886,10 +2039,15 @@ document.getElementById('btn-tour').addEventListener('click', () => {
 
 /* --- 分享 --- */
 async function share(){
-  if (!currentResult) return;
-  const line = LINES.find(l => l.id === currentResult.lineId);
-  const names = currentResult.stationIds.map(id => S[id].name).join('、');
-  const text = `【雙北捷運抽抽抽】今天抽中 ${line.name}：${names}！`;
+  let text;
+  if (currentResult){
+    const line = LINES.find(l => l.id === currentResult.lineId);
+    const names = currentResult.stationIds.map(id => S[id].name).join('、');
+    text = `【雙北捷運抽抽抽】今天抽中 ${line.name}：${names}！`;
+  } else if (state.lastLine){
+    const line = LINES.find(l => l.id === state.lastLine);
+    text = `【雙北捷運抽抽抽】這次抽中 ${line.name}——三個站下次揭曉！`;
+  } else return;
   const url = 'https://a102304043.github.io/TaipeiMetroDraw/';
   try {
     if (navigator.share) await navigator.share({title:'雙北捷運抽抽抽', text, url});
@@ -1907,8 +2065,8 @@ document.getElementById('btn-share').addEventListener('click', share);
    §8a Tour — 首次導覽（三步 coach-mark；設定可重播）
    ============================================================ */
 const TOUR_STEPS = [
-  {t:'🎲 開抽！', target:'#draw-btn', boost:'#sheet',
-   p:'按下大按鈕：先隨機抽一條線，再從線上抽出三個站——今天的行程交給命運決定。動畫太久？點畫面任意處直接看結果。'},
+  {t:'🎰🎲 兩種抽法', target:'#draw-row', boost:'#sheet',
+   p:'「抽路線」先抽出今天的線；「抽三站」再從指定的線抽出三個站——分兩次抽，或一路抽到底都行。動畫太久？點畫面任意處直接看結果。'},
   {t:'🗺️ 路網圖就是舞台', target:'#refocus', boost:'#refocus',
    p:'地圖可以雙指縮放、單指拖曳。點任何一個站，會打開它的介紹卡：照片、簡介、今日探訪任務與導航。⌖ 回到抽選結果、⛶ 看整張路網圖。'},
   {t:'🕘 收集你的足跡', target:'#btn-history', boost:'header',
@@ -2463,7 +2621,7 @@ updateStats();
 syncVisitedMap();
 const DEBUG = new URLSearchParams(location.search).get('debug');
 if (DEBUG === 'labels') debugLabels();
-if (DEBUG) window.__tmd = { drawResult, LINES, STATIONS, S, state, Camera, openStationCard, getWikiData, missionFor, startTour, STATION_TAGS, TAG_MISSIONS, MISSIONS };  // 測試掛鉤
+if (DEBUG) window.__tmd = { drawResult, pickLine, pickStations, runStationCeremony, LINES, STATIONS, S, state, Camera, openStationCard, getWikiData, missionFor, startTour, STATION_TAGS, TAG_MISSIONS, MISSIONS };  // 測試掛鉤
 
 /* 開場：路網描線 → 站點淡入 → 鏡頭推進市中心 → 標題卡退場（點擊跳過） */
 const LANDING = {x:600, y:425, w:500, h:450};
@@ -2513,7 +2671,10 @@ document.getElementById('overview').addEventListener('click', () => {
   for (const t of gLabels.querySelectorAll('.lbl.semi')) t.classList.remove('semi');
   Camera.focusContent(650);
 });
-drawBtn.addEventListener('click', runCeremony);
+lineBtn.addEventListener('click', runLineCeremony);
+stationsBtn.addEventListener('click', openLinePicker);
+document.getElementById('btn-draw-here').addEventListener('click', () => runStationCeremony(state.lastLine));
+document.getElementById('btn-share-line').addEventListener('click', share);
 
 /* 浮動鈕貼齊結果面板頂端（面板長高時不被蓋住） */
 new ResizeObserver(() => {
