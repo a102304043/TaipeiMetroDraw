@@ -231,7 +231,8 @@ header .spacer{flex:1}
 #map[data-lod="1"] .lbl{display:none}
 #map[data-lod="1"] .lbl.tA{display:inline}
 #map .lbl.picked{display:inline !important}
-#hop-dot{fill:var(--ink); stroke:var(--card); stroke-width:2}
+#hop-dot{fill:var(--ink); stroke:var(--card); stroke-width:2; pointer-events:none}
+.pin{pointer-events:none}   /* 釘選標記不攔截點擊——抽中站也要能點開介紹卡 */
 .pin-pop{
   transform-box:fill-box; transform-origin:center;
   animation:pin-in .5s cubic-bezier(.34,1.56,.64,1);
