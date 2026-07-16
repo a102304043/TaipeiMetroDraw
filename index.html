@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW" data-mode="auto" data-skin="classic">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="雙北捷運抽站探訪——先抽一條線，再抽三個站，出發！">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F7F5">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121417">
+<title>雙北捷運抽站</title>
+<style>
+/* ============================================================
+   §CSS-1 Tokens — 第一層：路線原色（恆定，不隨模式變）
+   北捷六線＝官方色；V/K/LB/A 已對照 Wikipedia 官方色票模板
+   ============================================================ */
+:root{
+  --line-BR:#C48C31; --line-R:#E3002C; --line-G:#008659; --line-O:#F8B61C;
+  --line-BL:#0070BD; --line-Y:#FEDB00; --line-V:#E5554F; --line-K:#C3B091;
+  --line-LB:#4EC3E0; --line-A:#8246AF;
+  /* 徽章上的文字色：淺色線用黑字（對比 >= 4.5:1） */
+  --on-BR:#fff; --on-R:#fff; --on-G:#fff; --on-O:#111; --on-BL:#fff;
+  --on-Y:#111; --on-V:#fff; --on-K:#111; --on-LB:#111; --on-A:#fff;
+  --font-sans:system-ui,-apple-system,"PingFang TC","Noto Sans TC","Microsoft JhengHei","Segoe UI",Roboto,sans-serif;
+  color-scheme: light dark;
+}
+
+/* ============================================================
+   §CSS-2 Tokens — 第二層：語意色（隨深淺模式變）
+   ============================================================ */
+:root{
+  --surface:#F7F7F5; --card:#FFFFFF; --ink:#1A1C1E; --ink-2:#5D6166;
+  --map-bg:#F2F1EC; --hairline:#E3E2DD; --accent:#0070BD;
+  --shadow:0 4px 24px rgba(0,0,0,.12);
+}
+:root[data-mode="dark"]{
+  --surface:#121417; --card:#1C1F24; --ink:#ECEDEE; --ink-2:#9BA1A8;
+  --map-bg:#16181D; --hairline:#2A2E34; --accent:#4DA3E0;
+  --shadow:0 4px 24px rgba(0,0,0,.5);
+}
+@media (prefers-color-scheme: dark){
+  :root[data-mode="auto"]{
+    --surface:#121417; --card:#1C1F24; --ink:#ECEDEE; --ink-2:#9BA1A8;
+    --map-bg:#16181D; --hairline:#2A2E34; --accent:#4DA3E0;
+    --shadow:0 4px 24px rgba(0,0,0,.5);
+  }
+}
+
+/* ============================================================
+   §CSS-3 版面
+   ============================================================ */
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:var(--font-sans);
+  background:var(--surface); color:var(--ink);
+  height:100vh; height:100dvh;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+header{
+  position:fixed; inset:0 0 auto 0; z-index:20;
+  display:flex; align-items:center; gap:8px;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  pointer-events:none; /* 讓地圖手勢穿透，按鈕自己開回來 */
+}
+header h1{
+  font-size:1.125rem; font-weight:800; letter-spacing:.04em;
+  text-shadow:0 1px 8px var(--surface);
+}
+header .spacer{flex:1}
+.icon-btn{
+  pointer-events:auto;
+  width:44px;height:44px; border:none; border-radius:12px;
+  background:var(--card); color:var(--ink); box-shadow:var(--shadow);
+  font-size:1.25rem; cursor:pointer;
+  touch-action:manipulation;
+}
+.icon-btn:active{transform:scale(.94)}
+
+/* 地圖 */
+#map{
+  position:absolute; inset:0;
+  width:100%; height:100%;
+  background:var(--map-bg);
+  touch-action:none;
+  user-select:none; -webkit-user-select:none;
+}
+#map-placeholder{
+  position:absolute; inset:0; z-index:5;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:12px; color:var(--ink-2); pointer-events:none;
+  padding:0 32px; text-align:center;
+}
+#map-placeholder .dots{display:flex; gap:10px}
+#map-placeholder .dots span{
+  width:14px;height:14px;border-radius:50%;
+  animation:bob 1.2s ease-in-out infinite;
+}
+#map-placeholder .dots span:nth-child(2){animation-delay:.1s}
+#map-placeholder .dots span:nth-child(3){animation-delay:.2s}
+#map-placeholder .dots span:nth-child(4){animation-delay:.3s}
+#map-placeholder .dots span:nth-child(5){animation-delay:.4s}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media (prefers-reduced-motion: reduce){
+  #map-placeholder .dots span{animation:none}
+}
+
+/* Bottom sheet（骨架：僅 peek 態） */
+#sheet{
+  position:fixed; inset:auto 0 0 0; z-index:30;
+  background:var(--card);
+  border-radius:20px 20px 0 0;
+  box-shadow:var(--shadow);
+  padding:12px 16px calc(16px + env(safe-area-inset-bottom));
+}
+#sheet .handle{
+  width:40px;height:4px;border-radius:2px;
+  background:var(--hairline); margin:0 auto 12px;
+}
+#draw-btn{
+  display:block; width:100%; min-height:56px;
+  border:none; border-radius:16px;
+  background:var(--accent); color:#fff;
+  font-family:inherit; font-size:1.25rem; font-weight:800; letter-spacing:.1em;
+  cursor:pointer; touch-action:manipulation;
+  transition:transform .12s ease;
+}
+#draw-btn:active{transform:scale(.97)}
+
+/* Toast */
+#toast{
+  position:fixed; left:50%; bottom:calc(120px + env(safe-area-inset-bottom));
+  transform:translateX(-50%) translateY(8px);
+  z-index:99; max-width:86vw;
+  background:var(--ink); color:var(--surface);
+  padding:10px 18px; border-radius:12px; font-size:.9375rem;
+  opacity:0; pointer-events:none;
+  transition:opacity .25s ease, transform .25s ease;
+}
+#toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>雙北捷運抽站</h1>
+  <div class="spacer"></div>
+  <button class="icon-btn" id="btn-history" aria-label="歷史紀錄" title="歷史紀錄">🕘</button>
+  <button class="icon-btn" id="btn-settings" aria-label="設定" title="設定">⚙️</button>
+</header>
+
+<svg id="map" viewBox="0 0 1500 1800" role="img" aria-label="雙北捷運路網圖">
+  <title>雙北捷運路網圖</title>
+  <g id="world">
+    <g id="g-lines"></g>
+    <g id="g-highlight"></g>
+    <g id="g-stations"></g>
+    <g id="g-labels"></g>
+  </g>
+</svg>
+
+<div id="map-placeholder" aria-hidden="true">
+  <div class="dots">
+    <span style="background:var(--line-BR)"></span>
+    <span style="background:var(--line-R)"></span>
+    <span style="background:var(--line-G)"></span>
+    <span style="background:var(--line-BL)"></span>
+    <span style="background:var(--line-A)"></span>
+  </div>
+  <p>路網圖建置中——10 條線、192 個站即將進站</p>
+</div>
+
+<div id="sheet">
+  <div class="handle"></div>
+  <button id="draw-btn">🎲 抽 站 去 ！</button>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ============================================================
+   §1 DATA — 路線與站點資料（Step 2/6 填入）
+   ============================================================ */
+
+/* ============================================================
+   §2 Store — localStorage 包裝（Safari 無痕降級記憶體模式）
+   ============================================================ */
+const Store = (() => {
+  const KEY = 'tmd.v1';
+  const DEFAULTS = {
+    version: 1,
+    settings: { excludeVisited:false, excludeTaoyuan:false, skin:'classic', mode:'auto', sound:false, vibrate:true },
+    visited: [],
+    history: [],
+  };
+  let mem = null; // localStorage 不可用時的記憶體備援
+  function load(){
+    if (mem) return mem;
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return structuredClone(DEFAULTS);
+      const data = JSON.parse(raw);
+      return { ...structuredClone(DEFAULTS), ...data, settings: { ...DEFAULTS.settings, ...(data.settings||{}) } };
+    } catch { return mem = structuredClone(DEFAULTS); }
+  }
+  function save(data){
+    try { localStorage.setItem(KEY, JSON.stringify(data)); }
+    catch { mem = data; }
+  }
+  return { load, save };
+})();
+
+/* ============================================================
+   §8 UI — 骨架階段：模式套用與 toast
+   ============================================================ */
+const state = Store.load();
+
+function applyMode(){
+  document.documentElement.dataset.mode = state.settings.mode;
+  document.documentElement.dataset.skin = state.settings.skin;
+}
+
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
+}
+
+/* ============================================================
+   §9 init
+   ============================================================ */
+applyMode();
+document.getElementById('draw-btn').addEventListener('click', () => {
+  toast('抽選引擎建置中，敬請期待 🚇');
+});
+document.getElementById('btn-history').addEventListener('click', () => toast('歷史紀錄建置中'));
+document.getElementById('btn-settings').addEventListener('click', () => toast('設定建置中'));
+
+})();
+</script>
+</body>
+</html>
