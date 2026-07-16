@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="雙北捷運抽站探訪——先抽一條線，再抽三個站，出發！">
+<meta name="description" content="雙北捷運抽抽抽——先抽一條線，再抽三個站，出發！">
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="#F7F7F5">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#121417">
-<meta property="og:title" content="雙北捷運抽站">
+<meta property="og:title" content="雙北捷運抽抽抽">
 <meta property="og:description" content="先抽一條線，再抽三個站，出發探訪！北捷＋新北捷＋機捷全路網隨機抽選。">
 <meta property="og:url" content="https://a102304043.github.io/TaipeiMetroDraw/">
 <meta property="og:type" content="website">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="捷運抽站">
+<meta name="apple-mobile-web-app-title" content="捷運抽抽抽">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚇</text></svg>">
-<title>雙北捷運抽站</title>
+<title>雙北捷運抽抽抽</title>
 <style>
 /* ============================================================
    §CSS-1 Tokens — 第一層：路線原色（恆定，不隨模式變）
@@ -284,7 +284,7 @@ header .spacer{flex:1}
 .panel-head h2{font-size:1.125rem; font-weight:800}
 .panel-head .spacer{flex:1}
 .panel .body{
-  flex:1; overflow-y:auto;
+  flex:1; min-height:0; overflow-y:auto;   /* min-height:0：flex 子元素才能縮，footer 才不會被推出畫面 */
   padding:0 16px calc(24px + env(safe-area-inset-bottom));
   overscroll-behavior:contain;
 }
@@ -330,8 +330,8 @@ header .spacer{flex:1}
 .panel.sheet{
   top:auto; max-height:78dvh;
   border-radius:20px 20px 0 0;
-  transform:translateY(40px);
 }
+.panel.sheet:not(.in){transform:translateY(40px)}   /* 進場位移只在未展開時 */
 #scrim{
   position:fixed; inset:0; z-index:45;
   background:rgba(0,0,0,.35);
@@ -345,7 +345,8 @@ header .spacer{flex:1}
 .st-code{padding:3px 10px; border-radius:999px; font-weight:800; font-size:.8125rem; font-variant-numeric:tabular-nums}
 .st-photo{
   position:relative; border-radius:14px; overflow:hidden;
-  aspect-ratio:16/9; background:var(--hairline); margin-bottom:12px;
+  aspect-ratio:16/9; max-height:186px; width:100%;
+  background:var(--hairline); margin-bottom:12px;
 }
 .st-photo img{width:100%; height:100%; object-fit:cover; display:block}
 .st-photo .ph-fallback{
@@ -383,8 +384,16 @@ header .spacer{flex:1}
   font-size:.9375rem; line-height:1.5;
 }
 .mission b{display:block; font-size:.8125rem; color:var(--accent); margin-bottom:4px; letter-spacing:.08em}
-.st-actions{display:flex; gap:8px; margin:4px 0 8px}
+.st-actions{display:flex; gap:8px}
 .st-actions .sub-btn.on{background:var(--accent); color:#fff; border-color:var(--accent)}
+/* 動作列固定在卡片底部（免捲動即可見）；內容區才捲動 */
+.panel-foot{
+  flex:none;
+  padding:10px 16px calc(12px + env(safe-area-inset-bottom));
+  border-top:1px solid var(--hairline);
+  background:var(--surface);
+}
+.panel.sheet .body{padding-bottom:12px}
 
 /* 重新對焦浮動鈕 */
 #refocus{
@@ -451,6 +460,24 @@ body.intro #refocus{opacity:0}
 #tour-next{flex:none; min-width:96px; background:var(--accent); color:#fff; border-color:var(--accent)}
 .tour-ring{box-shadow:0 0 0 4px var(--accent) !important; border-radius:16px}
 
+/* 點站提示氣泡（首次打開站點卡後永久消失） */
+#map-hint{
+  position:fixed; left:50%;
+  top:calc(72px + env(safe-area-inset-top));
+  z-index:22; max-width:86vw; text-align:center;
+  background:var(--card); color:var(--ink);
+  box-shadow:var(--shadow); border-radius:999px;
+  padding:9px 16px; font-size:.875rem;
+  pointer-events:none;
+  animation:hint-bob 2s ease-in-out infinite;
+}
+#map-hint[hidden]{display:none}
+@keyframes hint-bob{
+  0%,100%{transform:translateX(-50%) translateY(0)}
+  50%{transform:translateX(-50%) translateY(-5px)}
+}
+@media (prefers-reduced-motion: reduce){#map-hint{animation:none; transform:translateX(-50%)}}
+
 #intro-title{
   position:fixed; inset:0; z-index:60;
   display:none; flex-direction:column; align-items:center; justify-content:center;
@@ -487,7 +514,7 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
 <body>
 
 <header>
-  <h1><span class="dots3" aria-hidden="true"><i style="background:var(--line-R)"></i><i style="background:var(--line-BL)"></i><i style="background:var(--line-G)"></i></span>雙北捷運抽站</h1>
+  <h1><span class="dots3" aria-hidden="true"><i style="background:var(--line-R)"></i><i style="background:var(--line-BL)"></i><i style="background:var(--line-G)"></i></span>雙北捷運抽抽抽</h1>
   <div class="spacer"></div>
   <button class="icon-btn" id="btn-history" aria-label="歷史紀錄" title="歷史紀錄">🕘</button>
   <button class="icon-btn" id="btn-settings" aria-label="設定" title="設定">⚙️</button>
@@ -517,7 +544,7 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
 
 <div id="intro-title" aria-hidden="true">
   <div class="it-logo">🚇</div>
-  <div class="it-name">雙北捷運抽站</div>
+  <div class="it-name">雙北捷運抽抽抽</div>
   <div class="it-tag">先抽線 · 再抽站 · 出發探訪</div>
 </div>
 
@@ -608,12 +635,16 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
     <button class="st-more" id="st-more" hidden>展開全文 ˅</button>
     <p class="st-src" id="st-src" hidden>簡介與照片來自 <a id="st-src-link" href="#" target="_blank" rel="noopener">維基百科</a>（CC BY-SA 4.0）</p>
     <div class="mission" id="st-mission"></div>
+  </div>
+  <div class="panel-foot">
     <div class="st-actions">
       <button class="sub-btn" id="st-nav">🧭 導航到這站</button>
       <button class="sub-btn" id="st-visit">✓ 標記已探訪</button>
     </div>
   </div>
 </div>
+
+<div id="map-hint" hidden>💡 點地圖上的任何一個站，看介紹與今日任務</div>
 
 <div id="tour" hidden role="dialog" aria-modal="true" aria-label="網站導覽">
   <div class="tour-card">
@@ -923,7 +954,7 @@ const Store = (() => {
   const KEY = 'tmd.v1';
   const DEFAULTS = {
     version: 1,
-    settings: { excludeVisited:false, excludeTaoyuan:false, skin:'classic', mode:'light', sound:false, vibrate:true, tourDone:false },
+    settings: { excludeVisited:false, excludeTaoyuan:false, skin:'classic', mode:'light', sound:false, vibrate:true, tourDone:false, stationHintDone:false },
     visited: [],
     history: [],
   };
@@ -1504,6 +1535,7 @@ async function runCeremony(){
 
   ceremonyActive = true; skipped = false;
   drawBtn.disabled = true;
+  dismissMapHint(false);
   Sound.ensure();   // 在使用者手勢中建立/喚醒 AudioContext（iOS 限制）
   clearResultRow(); clearPins(); dimAll(true);
   Camera.cancelAnim();
@@ -1750,10 +1782,10 @@ async function share(){
   if (!currentResult) return;
   const line = LINES.find(l => l.id === currentResult.lineId);
   const names = currentResult.stationIds.map(id => S[id].name).join('、');
-  const text = `【雙北捷運抽站】今天抽中 ${line.name}：${names}！`;
+  const text = `【雙北捷運抽抽抽】今天抽中 ${line.name}：${names}！`;
   const url = 'https://a102304043.github.io/TaipeiMetroDraw/';
   try {
-    if (navigator.share) await navigator.share({title:'雙北捷運抽站', text, url});
+    if (navigator.share) await navigator.share({title:'雙北捷運抽抽抽', text, url});
     else { await navigator.clipboard.writeText(`${text} ${url}`); toast('已複製到剪貼簿'); }
   } catch {}
 }
@@ -1804,6 +1836,25 @@ function endTour(){
   tourEl.hidden = true;
   state.settings.tourDone = true;
   Store.save(state);
+  setTimeout(showMapHint, 600);
+}
+
+/* 點站提示：直到使用者第一次打開站點卡才永久消失 */
+const mapHint = document.getElementById('map-hint');
+let mapHintTimer = 0;
+function showMapHint(){
+  if (state.settings.stationHintDone) return;
+  mapHint.hidden = false;
+  clearTimeout(mapHintTimer);
+  mapHintTimer = setTimeout(() => { mapHint.hidden = true; }, 12000);
+}
+function dismissMapHint(persist){
+  mapHint.hidden = true;
+  clearTimeout(mapHintTimer);
+  if (persist && !state.settings.stationHintDone){
+    state.settings.stationHintDone = true;
+    Store.save(state);
+  }
 }
 function startTour(){ showTourStep(0); }
 document.getElementById('tour-next').addEventListener('click', () => showTourStep(tourStep + 1));
@@ -2018,6 +2069,7 @@ stEls.more.addEventListener('click', () => {
 async function openStationCard(id){
   const s = S[id];
   if (!s) return;
+  dismissMapHint(true);
   stCurrentId = id;
   stEls.codes.innerHTML = '';
   for (const [lid, code] of Object.entries(s.codes)){
@@ -2117,6 +2169,7 @@ function landingView(instant){
 (function runIntro(){
   const maybeTour = () => {
     if (!state.settings.tourDone) setTimeout(startTour, 400);
+    else setTimeout(showMapHint, 900);
   };
   if (DEBUG || matchMedia('(prefers-reduced-motion: reduce)').matches){
     landingView(true);
