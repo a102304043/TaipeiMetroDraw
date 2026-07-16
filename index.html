@@ -122,6 +122,18 @@ header .spacer{flex:1}
 }
 #draw-btn:active{transform:scale(.97)}
 
+/* 重新對焦浮動鈕 */
+#refocus{
+  position:fixed; right:16px;
+  bottom:calc(128px + env(safe-area-inset-bottom));
+  z-index:25;
+  width:44px;height:44px; border:none; border-radius:12px;
+  background:var(--card); color:var(--ink); box-shadow:var(--shadow);
+  font-size:1.375rem; cursor:pointer;
+  touch-action:manipulation;
+}
+#refocus:active{transform:scale(.94)}
+
 /* Toast */
 #toast{
   position:fixed; left:50%; bottom:calc(120px + env(safe-area-inset-bottom));
@@ -154,6 +166,8 @@ header .spacer{flex:1}
     <g id="g-debug"></g>
   </g>
 </svg>
+
+<button id="refocus" aria-label="重新對焦" title="重新對焦">⌖</button>
 
 <div id="sheet">
   <div class="handle"></div>
@@ -385,7 +399,6 @@ function renderMap(){
   }
 }
 
-/* 內容 bbox ＋ padding → 靜態 viewBox（Step 3 將由 Camera 接管） */
 function contentBBox(){
   let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
   for (const line of LINES)
@@ -395,10 +408,170 @@ function contentBBox(){
       }
   return {x:x0, y:y0, w:x1-x0, h:y1-y0};
 }
-function fitContent(pad = 90){
-  const b = contentBBox();
-  svg.setAttribute('viewBox', `${b.x-pad} ${b.y-pad} ${b.w+pad*2} ${b.h+pad*2}`);
-}
+
+/* ============================================================
+   §5 Camera — {cx, cy, scale} 單一狀態，唯一寫入點 apply()
+   scale ＝ 螢幕 CSS px / world unit
+   自動 focus、pinch、wheel 全走同一套換算
+   ============================================================ */
+const Camera = (() => {
+  const AUTO_MAX = 1.5;      // 自動 focus 的縮放上限（避免三站相鄰時失去脈絡）
+  const MANUAL_MAX = 3.0;    // 手動 pinch 上限
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+
+  let cx = 750, cy = 900, scale = 0.5;
+  let svgW = 1, svgH = 1;
+  let minScale = 0.05;
+  let bounds = {x:0, y:0, w:1500, h:1800};   // 相機中心可移動範圍
+  let anim = null;
+  let lastFocus = null;                       // 最近一次 focus 的 bbox（⌖ 用）
+
+  function measure(){
+    svgW = svg.clientWidth || 1;
+    svgH = svg.clientHeight || 1;
+    const b = contentBBox(), m = 120;
+    bounds = {x:b.x-m, y:b.y-m, w:b.w+m*2, h:b.h+m*2};
+    minScale = Math.min(svgW/bounds.w, svgH/bounds.h);
+  }
+  function insets(){
+    const header = document.querySelector('header');
+    const sheet = document.getElementById('sheet');
+    return {
+      top: header.getBoundingClientRect().bottom + 8,
+      bottom: (sheet?.getBoundingClientRect().height ?? 0) + 8,
+    };
+  }
+  function clampState(){
+    scale = Math.min(Math.max(scale, minScale), MANUAL_MAX);
+    cx = Math.min(Math.max(cx, bounds.x), bounds.x + bounds.w);
+    cy = Math.min(Math.max(cy, bounds.y), bounds.y + bounds.h);
+  }
+  function apply(){
+    const vw = svgW/scale, vh = svgH/scale;
+    svg.setAttribute('viewBox', `${cx - vw/2} ${cy - vh/2} ${vw} ${vh}`);
+  }
+
+  /* bbox → 目標相機（padding、insets、縮放上限、sheet 位移補償） */
+  function fitBBox(bbox, {maxScale = AUTO_MAX, remember = true} = {}){
+    if (remember) lastFocus = bbox;
+    const ins = insets();
+    const availW = Math.max(80, svgW - 32);
+    const availH = Math.max(80, svgH - ins.top - ins.bottom);
+    const padX = Math.max(bbox.w * 0.15, 100);
+    const padY = Math.max(bbox.h * 0.15, 100);
+    let s = Math.min(availW/(bbox.w + padX*2), availH/(bbox.h + padY*2));
+    s = Math.min(Math.max(s, minScale), maxScale);
+    const visCenterY = ins.top + (svgH - ins.top - ins.bottom)/2;
+    return {
+      cx: bbox.x + bbox.w/2,
+      cy: bbox.y + bbox.h/2 + (svgH/2 - visCenterY)/s,
+      scale: s,
+    };
+  }
+
+  const easeInOutCubic = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3)/2;
+
+  function animateTo(target, duration = 650){
+    cancelAnim();
+    if (reduceMotion.matches || duration <= 0){
+      ({cx, cy, scale} = target); clampState(); apply(); return;
+    }
+    const from = {cx, cy, scale};
+    const lnS0 = Math.log(from.scale), lnS1 = Math.log(target.scale);
+    const t0 = performance.now();
+    const step = now => {
+      const t = Math.min(1, (now - t0)/duration), e = easeInOutCubic(t);
+      cx = from.cx + (target.cx - from.cx)*e;
+      cy = from.cy + (target.cy - from.cy)*e;
+      scale = Math.exp(lnS0 + (lnS1 - lnS0)*e);   // log 空間插值，縮放感受均速
+      clampState(); apply();
+      anim = t < 1 ? requestAnimationFrame(step) : null;
+    };
+    anim = requestAnimationFrame(step);
+  }
+  function cancelAnim(){
+    if (anim){ cancelAnimationFrame(anim); anim = null; }
+  }
+
+  function focusBBox(bbox, opts){ animateTo(fitBBox(bbox, opts)); }
+  function focusContent(duration){
+    measure();
+    animateTo(fitBBox(contentBBox()), duration);
+  }
+  function refocus(){
+    measure();
+    animateTo(fitBBox(lastFocus ?? contentBBox()));
+  }
+
+  /* --- 手勢（Pointer Events）：使用者輸入永遠贏 --- */
+  const pointers = new Map();
+  let prevMid = null, prevDist = 0;
+
+  function screenToWorld(px, py){
+    return [cx + (px - svgW/2)/scale, cy + (py - svgH/2)/scale];
+  }
+  function zoomAt(px, py, k){
+    const [wx, wy] = screenToWorld(px, py);
+    scale = Math.min(Math.max(scale*k, minScale), MANUAL_MAX);
+    cx = wx - (px - svgW/2)/scale;
+    cy = wy - (py - svgH/2)/scale;
+    clampState(); apply();
+  }
+
+  svg.addEventListener('pointerdown', e => {
+    cancelAnim();
+    svg.setPointerCapture(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (pointers.size === 2){
+      const [a, b] = [...pointers.values()];
+      prevMid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+      prevDist = Math.hypot(a.x-b.x, a.y-b.y);
+    }
+  });
+  svg.addEventListener('pointermove', e => {
+    if (!pointers.has(e.pointerId)) return;
+    const prev = pointers.get(e.pointerId);
+    pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+    if (pointers.size === 1){
+      cx -= (e.clientX - prev.x)/scale;
+      cy -= (e.clientY - prev.y)/scale;
+      clampState(); apply();
+    } else if (pointers.size === 2){
+      const [a, b] = [...pointers.values()];
+      const mid = {x:(a.x+b.x)/2, y:(a.y+b.y)/2};
+      const dist = Math.hypot(a.x-b.x, a.y-b.y);
+      if (prevDist > 0) zoomAt(mid.x, mid.y, dist/prevDist);
+      cx -= (mid.x - prevMid.x)/scale;
+      cy -= (mid.y - prevMid.y)/scale;
+      clampState(); apply();
+      prevMid = mid; prevDist = dist;
+    }
+  });
+  function endPointer(e){
+    pointers.delete(e.pointerId);
+    prevMid = null; prevDist = 0;
+  }
+  svg.addEventListener('pointerup', endPointer);
+  svg.addEventListener('pointercancel', endPointer);
+
+  svg.addEventListener('wheel', e => {
+    e.preventDefault();
+    cancelAnim();
+    zoomAt(e.clientX, e.clientY, Math.pow(1.0015, -e.deltaY));
+  }, {passive:false});
+
+  window.addEventListener('resize', () => {
+    measure(); clampState(); apply();
+  });
+
+  function init(){
+    measure();
+    ({cx, cy, scale} = fitBBox(contentBBox(), {remember:false}));
+    clampState(); apply();
+  }
+
+  return { init, focusBBox, focusContent, refocus, fitBBox, cancelAnim };
+})();
 
 /* ?debug=labels — label 重疊偵測（建檔期工具） */
 function debugLabels(){
@@ -441,9 +614,10 @@ function toast(msg){
    ============================================================ */
 applyMode();
 renderMap();
-fitContent();
+Camera.init();
 if (new URLSearchParams(location.search).get('debug') === 'labels') debugLabels();
 
+document.getElementById('refocus').addEventListener('click', () => Camera.refocus());
 document.getElementById('draw-btn').addEventListener('click', () => {
   toast('抽選引擎建置中，敬請期待 🚇');
 });
