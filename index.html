@@ -562,7 +562,7 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
       <button class="sub-btn" id="btn-share">↗ 分享</button>
     </div>
   </div>
-  <button id="draw-btn">🎲 抽 站 去 ！</button>
+  <button id="draw-btn">🎲 開 抽 ！</button>
 </div>
 
 <div class="panel" id="panel-history" role="dialog" aria-modal="true" aria-label="歷史紀錄">
@@ -1492,7 +1492,7 @@ function clearResultRow(){
   resultEl.hidden = true;
   picksEl.innerHTML = '';
   briefEl.hidden = false;
-  drawBtn.textContent = '🎲 抽 站 去 ！';
+  drawBtn.textContent = '🎲 開 抽 ！';
 }
 function addChip(id, line, k){
   resultEl.hidden = false;
@@ -1800,7 +1800,7 @@ document.getElementById('btn-share').addEventListener('click', share);
    §8a Tour — 首次導覽（三步 coach-mark；設定可重播）
    ============================================================ */
 const TOUR_STEPS = [
-  {t:'🎲 抽站去！', target:'#draw-btn', boost:'#sheet',
+  {t:'🎲 開抽！', target:'#draw-btn', boost:'#sheet',
    p:'按下大按鈕：先隨機抽一條線，再從線上抽出三個站——今天的行程交給命運決定。動畫太久？點畫面任意處直接看結果。'},
   {t:'🗺️ 路網圖就是舞台', target:'#refocus', boost:'#refocus',
    p:'地圖可以雙指縮放、單指拖曳。點任何一個站，會打開它的介紹卡：照片、簡介、今日探訪任務與導航。迷路了就按 ⌖ 回到抽選結果。'},
