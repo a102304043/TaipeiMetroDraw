@@ -986,8 +986,8 @@ for (const [lid, n] of Object.entries(EXPECTED_COUNTS)){
 const Store = (() => {
   const KEY = 'tmd.v1';
   const DEFAULTS = {
-    version: 1,
-    settings: { excludeVisited:false, excludeTaoyuan:false, skin:'classic', mode:'light', sound:false, vibrate:true, tourDone:false, stationHintDone:false },
+    version: 2,
+    settings: { excludeVisited:true, excludeTaoyuan:false, skin:'classic', mode:'light', sound:false, vibrate:true, tourDone:false, stationHintDone:false },
     visited: [],
     history: [],
   };
@@ -998,7 +998,12 @@ const Store = (() => {
       const raw = localStorage.getItem(KEY);
       if (!raw) return structuredClone(DEFAULTS);
       const data = JSON.parse(raw);
-      return { ...structuredClone(DEFAULTS), ...data, settings: { ...DEFAULTS.settings, ...(data.settings||{}) } };
+      const merged = { ...structuredClone(DEFAULTS), ...data, settings: { ...DEFAULTS.settings, ...(data.settings||{}) } };
+      if ((data.version ?? 1) < 2){   // v2 遷移：排除已探訪改為預設開啟
+        merged.settings.excludeVisited = true;
+        merged.version = 2;
+      }
+      return merged;
     } catch { return mem = structuredClone(DEFAULTS); }
   }
   function save(data){
@@ -2084,8 +2089,16 @@ const TAG_MISSIONS = {
           '拍下航廈或車站最有設計感的角落',
           '查一班正要起飛的航班，全員比出目的地手勢合影'],
 };
+/* 每站唯一的招牌探訪任務（經站點特色查證撰寫；主題池/通用池降為 fallback）
+   MISSIONS:BEGIN（tools/verify-missions.mjs 以此標記抽取驗證） */
+const STATION_MISSIONS = {};
+/* MISSIONS:END */
+
 function missionFor(id){
-  const seed = id + new Date().toISOString().slice(0, 10);   // 當日固定，隔天換籤
+  const sig = STATION_MISSIONS[id];
+  if (sig) return sig;
+  // fallback（未來新站如 R01 上架時，先走主題池/通用池）
+  const seed = id + new Date().toISOString().slice(0, 10);
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   const themed = (STATION_TAGS[id] ?? []).flatMap(t => TAG_MISSIONS[t] ?? []);
