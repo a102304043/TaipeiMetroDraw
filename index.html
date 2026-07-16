@@ -198,6 +198,13 @@ header .spacer{flex:1}
 #map .dot.dimmed, #map .lbl.dimmed{opacity:.15}
 #map .lbl.semi{opacity:.4}
 #map .lbl.picked{font-weight:800; font-size:17px}
+/* 已探訪蓋章（集章風：微傾斜紅色 ✓ 印） */
+:root{--stamp:#D9534F}
+:root[data-mode="dark"]{--stamp:#E77974}
+@media (prefers-color-scheme: dark){:root[data-mode="auto"]{--stamp:#E77974}}
+.stamp{pointer-events:none}
+.stamp circle{fill:var(--card); fill-opacity:.6; stroke:var(--stamp); stroke-width:2}
+.stamp text{fill:var(--stamp); font-weight:800; font-size:12px; font-family:var(--font-sans)}
 
 /* Label 三級 LOD（依縮放層級，由 Camera 切 data-lod；抽中站永遠顯示） */
 #g-labels text{text-rendering:optimizeSpeed}
@@ -525,6 +532,7 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
   <g id="world">
     <g id="g-lines"></g>
     <g id="g-stations"></g>
+    <g id="g-visited"></g>
     <g id="g-highlight"></g>
     <g id="g-labels"></g>
     <g id="g-debug"></g>
@@ -1007,6 +1015,7 @@ function segToPoints(seg){
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('map');
 const gLines     = document.getElementById('g-lines');
+const gVisited   = document.getElementById('g-visited');
 const gHighlight = document.getElementById('g-highlight');
 const gStations  = document.getElementById('g-stations');
 const gLabels    = document.getElementById('g-labels');
@@ -1449,12 +1458,34 @@ function clearPins(){
 function pinScaleFactor(){
   return Math.min(3, Math.max(1, 1/Camera.getScale()));
 }
+const stampScaleFactor = () => Math.min(2, Math.max(1, 1/Camera.getScale()));
 function updatePinScale(){
   const f = pinScaleFactor();
   for (const g of gHighlight.querySelectorAll('.pin'))
     g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${f})`);
+  const fs = stampScaleFactor();
+  for (const g of gVisited.children)
+    g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${fs}) rotate(-12)`);
 }
 svg.addEventListener('camerachange', updatePinScale);
+
+/* 已探訪 → 地圖蓋章 */
+function syncVisitedMap(){
+  gVisited.innerHTML = '';
+  const fs = stampScaleFactor();
+  for (const id of state.visited){
+    const s = S[id];
+    if (!s || s.enabled === false) continue;
+    const g = el('g', {class:'stamp', 'data-x':s.x, 'data-y':s.y,
+      transform:`translate(${s.x} ${s.y}) scale(${fs}) rotate(-12)`});
+    // 徽章偏移到站點右上角，與釘選標記共存時仍可見
+    g.appendChild(el('circle', {cx:11, cy:-11, r:8.5}));
+    const t = el('text', {x:11, y:-11, dy:'0.36em', 'text-anchor':'middle'});
+    t.textContent = '✓';
+    g.appendChild(t);
+    gVisited.appendChild(g);
+  }
+}
 
 function pinStation(id, lineId, k){
   const s = S[id];
@@ -1642,6 +1673,7 @@ function syncVisitedUI(){
     li.classList.toggle('visited', v.has(li.dataset.id));
   if (panelHistory.classList.contains('show')) renderHistory();
   updateStats();
+  syncVisitedMap();
 }
 function updateStats(){
   const total = STATIONS.filter(s => s.enabled !== false).length;
@@ -2157,6 +2189,7 @@ applyMode();
 renderMap();
 Camera.init();
 updateStats();
+syncVisitedMap();
 const DEBUG = new URLSearchParams(location.search).get('debug');
 if (DEBUG === 'labels') debugLabels();
 if (DEBUG) window.__tmd = { drawResult, LINES, STATIONS, S, state, Camera, openStationCard, getWikiData, missionFor, startTour, STATION_TAGS, TAG_MISSIONS, MISSIONS };  // 測試掛鉤
