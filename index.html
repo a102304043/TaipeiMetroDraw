@@ -616,7 +616,6 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
     <ol class="picks" id="result-picks"></ol>
     <div id="line-next" hidden>
       <button class="sub-btn" id="btn-draw-here">🎲 抽這條線的三站</button>
-      <button class="sub-btn" id="btn-share-line">↗ 分享</button>
     </div>
     <div id="result-actions">
       <button class="sub-btn" id="btn-visit-all">✓ 標記三站已探訪</button>
@@ -2039,15 +2038,10 @@ document.getElementById('btn-tour').addEventListener('click', () => {
 
 /* --- 分享 --- */
 async function share(){
-  let text;
-  if (currentResult){
-    const line = LINES.find(l => l.id === currentResult.lineId);
-    const names = currentResult.stationIds.map(id => S[id].name).join('、');
-    text = `【雙北捷運抽抽抽】今天抽中 ${line.name}：${names}！`;
-  } else if (state.lastLine){
-    const line = LINES.find(l => l.id === state.lastLine);
-    text = `【雙北捷運抽抽抽】這次抽中 ${line.name}——三個站下次揭曉！`;
-  } else return;
+  if (!currentResult) return;
+  const line = LINES.find(l => l.id === currentResult.lineId);
+  const names = currentResult.stationIds.map(id => S[id].name).join('、');
+  const text = `【雙北捷運抽抽抽】今天抽中 ${line.name}：${names}！`;
   const url = 'https://a102304043.github.io/TaipeiMetroDraw/';
   try {
     if (navigator.share) await navigator.share({title:'雙北捷運抽抽抽', text, url});
@@ -2674,7 +2668,6 @@ document.getElementById('overview').addEventListener('click', () => {
 lineBtn.addEventListener('click', runLineCeremony);
 stationsBtn.addEventListener('click', openLinePicker);
 document.getElementById('btn-draw-here').addEventListener('click', () => runStationCeremony(state.lastLine));
-document.getElementById('btn-share-line').addEventListener('click', share);
 
 /* 浮動鈕貼齊結果面板頂端（面板長高時不被蓋住） */
 new ResizeObserver(() => {
