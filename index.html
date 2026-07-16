@@ -158,16 +158,27 @@ header .spacer{flex:1}
 
 /* 地圖 dim 與釘選高亮 */
 #map .line.dimmed, #map .dot.dimmed, #map .lbl.dimmed{opacity:.15; transition:opacity .3s ease}
-#map .lbl.picked{font-weight:800; font-size:15px}
+#map .lbl.semi{opacity:.4}
+#map .lbl.picked{font-weight:800; font-size:17px}
 #hop-dot{fill:var(--ink); stroke:var(--card); stroke-width:2}
-.pin .ring{fill:none; stroke-width:4}
+.pin-pop{
+  transform-box:fill-box; transform-origin:center;
+  animation:pin-in .5s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes pin-in{from{transform:scale(2.6); opacity:0} to{transform:scale(1); opacity:1}}
+.pin .halo{opacity:.2}
+.pin .core{stroke:var(--card); stroke-width:2.5}
+.pin .pin-num{font-family:var(--font-sans); font-size:15px; font-weight:800}
 .pin .pulse{
-  fill:none; stroke-width:3;
+  fill:none; stroke-width:4;
   transform-box:fill-box; transform-origin:center;
   animation:pulse 1.6s ease-out infinite;
 }
-@keyframes pulse{from{transform:scale(1); opacity:.9} to{transform:scale(2.6); opacity:0}}
-@media (prefers-reduced-motion: reduce){.pin .pulse{animation:none; opacity:.4}}
+@keyframes pulse{from{transform:scale(1); opacity:.9} to{transform:scale(2.8); opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  .pin-pop{animation:none}
+  .pin .pulse{animation:none; opacity:.4}
+}
 
 /* 結果列（迷你版；完整卡片於 Step 5/7） */
 #result{margin-bottom:12px}
@@ -183,12 +194,89 @@ header .spacer{flex:1}
   transition:opacity .3s ease, transform .3s ease;
 }
 #result .pick-chip.in{opacity:1; transform:none}
+#result .pick-chip .idx{
+  display:inline-flex; align-items:center; justify-content:center;
+  width:18px; height:18px; border-radius:50%;
+  font-size:.75rem; font-weight:800; margin-bottom:4px;
+}
 #result .pick-chip .code{
   display:block; font-size:.75rem; color:var(--ink-2);
   font-variant-numeric:tabular-nums; margin-bottom:2px;
 }
 #result .pick-chip .nm{font-weight:600; font-size:1.0625rem}
 .sr-only{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
+/* ============================================================
+   §CSS-7 結果動作列、面板（歷史／設定）
+   ============================================================ */
+#result .pick-chip{cursor:pointer}
+#result .pick-chip.visited .nm::after{content:" ✓"; color:var(--accent); font-weight:800}
+#result-actions{display:flex; gap:8px; margin-top:10px; margin-bottom:12px}
+.sub-btn{
+  flex:1; min-height:44px;
+  border:1px solid var(--hairline); border-radius:12px;
+  background:var(--surface); color:var(--ink);
+  font-family:inherit; font-size:.9375rem; font-weight:600;
+  cursor:pointer; touch-action:manipulation;
+}
+.sub-btn:active{transform:scale(.97)}
+
+.panel{
+  position:fixed; inset:0; z-index:50;
+  background:var(--surface);
+  display:none; flex-direction:column;
+  transform:translateY(24px); opacity:0;
+  transition:transform .25s ease, opacity .25s ease;
+}
+.panel.show{display:flex}
+.panel.in{transform:none; opacity:1}
+@media (prefers-reduced-motion: reduce){.panel{transition:none}}
+.panel-head{
+  display:flex; align-items:center; gap:8px;
+  padding:calc(12px + env(safe-area-inset-top)) 16px 12px;
+}
+.panel-head h2{font-size:1.125rem; font-weight:800}
+.panel-head .spacer{flex:1}
+.panel .body{
+  flex:1; overflow-y:auto;
+  padding:0 16px calc(24px + env(safe-area-inset-bottom));
+  overscroll-behavior:contain;
+}
+.section-title{
+  font-size:.8125rem; font-weight:600; color:var(--ink-2);
+  margin:18px 0 4px; letter-spacing:.08em;
+}
+.row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:14px 0; border-bottom:1px solid var(--hairline);
+  font-size:1rem;
+}
+.row input[type="checkbox"]{width:22px; height:22px; accent-color:var(--accent); flex:none}
+.seg{display:flex; gap:0; border:1px solid var(--hairline); border-radius:10px; overflow:hidden}
+.seg button{
+  min-height:36px; padding:0 14px; border:none;
+  background:transparent; color:var(--ink);
+  font-family:inherit; font-size:.9375rem; cursor:pointer;
+  touch-action:manipulation;
+}
+.seg button.on{background:var(--accent); color:#fff; font-weight:600}
+
+.progress{height:8px; background:var(--hairline); border-radius:4px; margin:6px 0 2px}
+.progress i{display:block; height:100%; width:0; background:var(--accent); border-radius:4px}
+.progress-txt{font-size:.875rem; color:var(--ink-2); margin-bottom:8px}
+.h-entry{padding:12px 0; border-bottom:1px solid var(--hairline)}
+.h-meta{display:flex; align-items:center; gap:10px}
+.h-date{font-size:.8125rem; color:var(--ink-2); font-variant-numeric:tabular-nums}
+.h-badge{padding:3px 10px; border-radius:999px; font-size:.8125rem; font-weight:800}
+.h-sts{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap}
+.h-st{
+  border:1px solid var(--hairline); border-radius:999px;
+  padding:7px 14px; font-size:.9375rem; background:var(--card); color:var(--ink);
+  font-family:inherit; cursor:pointer; touch-action:manipulation;
+}
+.h-st.visited{background:var(--accent); border-color:var(--accent); color:#fff}
+.empty-hint{color:var(--ink-2); text-align:center; padding:32px 0}
+.danger{color:#C62828}
 
 /* 重新對焦浮動鈕 */
 #refocus{
@@ -228,8 +316,8 @@ header .spacer{flex:1}
   <title>雙北捷運路網圖</title>
   <g id="world">
     <g id="g-lines"></g>
-    <g id="g-highlight"></g>
     <g id="g-stations"></g>
+    <g id="g-highlight"></g>
     <g id="g-labels"></g>
     <g id="g-debug"></g>
   </g>
@@ -251,8 +339,56 @@ header .spacer{flex:1}
   <div id="result" hidden>
     <span class="line-badge" id="result-badge"></span>
     <ol class="picks" id="result-picks"></ol>
+    <div id="result-actions">
+      <button class="sub-btn" id="btn-visit-all">✓ 標記三站已探訪</button>
+      <button class="sub-btn" id="btn-share">↗ 分享</button>
+    </div>
   </div>
   <button id="draw-btn">🎲 抽 站 去 ！</button>
+</div>
+
+<div class="panel" id="panel-history" role="dialog" aria-modal="true" aria-label="歷史紀錄">
+  <div class="panel-head">
+    <h2>🕘 歷史紀錄</h2><span class="spacer"></span>
+    <button class="icon-btn" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="body">
+    <div class="progress-txt" id="hist-progress-txt"></div>
+    <div class="progress"><i id="hist-progress-bar"></i></div>
+    <p class="progress-txt">點站名可切換「已探訪」狀態</p>
+    <div id="hist-list"></div>
+    <p class="section-title">資料</p>
+    <button class="sub-btn danger" id="btn-clear-history" style="width:100%">清除歷史紀錄</button>
+  </div>
+</div>
+
+<div class="panel" id="panel-settings" role="dialog" aria-modal="true" aria-label="設定">
+  <div class="panel-head">
+    <h2>⚙️ 設定</h2><span class="spacer"></span>
+    <button class="icon-btn" data-close aria-label="關閉">✕</button>
+  </div>
+  <div class="body">
+    <p class="section-title">外觀</p>
+    <div class="row"><span>深淺模式</span>
+      <div class="seg" id="seg-mode">
+        <button data-mode="auto">自動</button>
+        <button data-mode="light">淺色</button>
+        <button data-mode="dark">深色</button>
+      </div>
+    </div>
+    <p class="section-title">抽選範圍</p>
+    <label class="row"><span>排除已探訪的站</span><input type="checkbox" id="opt-exclude-visited"></label>
+    <label class="row"><span>排除機場捷運桃園段（A7–A22）</span><input type="checkbox" id="opt-exclude-taoyuan"></label>
+    <p class="section-title">回饋</p>
+    <label class="row" id="row-vibrate"><span>震動</span><input type="checkbox" id="opt-vibrate"></label>
+    <label class="row"><span>音效（建置中）</span><input type="checkbox" id="opt-sound"></label>
+    <p class="section-title">資料</p>
+    <button class="sub-btn" id="btn-clear-visited" style="width:100%; margin-bottom:8px">清除已探訪紀錄</button>
+    <button class="sub-btn danger" id="btn-clear-all" style="width:100%">清除全部資料</button>
+    <p class="progress-txt" style="margin-top:20px">
+      站點資料查證自維基百科（2026-07）；路線代表色取自各營運機構官方色票。
+    </p>
+  </div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -535,6 +671,7 @@ const Camera = (() => {
   function apply(){
     const vw = svgW/scale, vh = svgH/scale;
     svg.setAttribute('viewBox', `${cx - vw/2} ${cy - vh/2} ${vw} ${vh}`);
+    svg.dispatchEvent(new Event('camerachange'));
   }
 
   /* bbox → 目標相機（padding、insets、縮放上限、sheet 位移補償） */
@@ -656,7 +793,7 @@ const Camera = (() => {
     clampState(); apply();
   }
 
-  return { init, focusBBox, focusContent, refocus, fitBBox, cancelAnim };
+  return { init, focusBBox, focusContent, refocus, fitBBox, cancelAnim, getScale: () => scale };
 })();
 
 /* ?debug=labels — label 重疊偵測（建檔期工具） */
@@ -800,23 +937,56 @@ function setDims(lineId){
 function clearPins(){
   gHighlight.innerHTML = '';
   for (const t of gLabels.querySelectorAll('.lbl.picked')) t.classList.remove('picked');
+  for (const t of gLabels.querySelectorAll('.lbl.semi')) t.classList.remove('semi');
 }
-function pinStation(id, lineId){
+/* 釘選標記做螢幕尺寸補償：zoom 越遠、world 尺寸越大，維持固定螢幕大小
+   （長線全景時三個編號標記依然清楚可辨） */
+function pinScaleFactor(){
+  return Math.min(3, Math.max(1, 1/Camera.getScale()));
+}
+function updatePinScale(){
+  const f = pinScaleFactor();
+  for (const g of gHighlight.querySelectorAll('.pin'))
+    g.setAttribute('transform', `translate(${g.dataset.x} ${g.dataset.y}) scale(${f})`);
+}
+svg.addEventListener('camerachange', updatePinScale);
+
+function pinStation(id, lineId, k){
   const s = S[id];
-  const g = el('g', {class:'pin'});
-  g.appendChild(el('circle', {class:'ring',  cx:s.x, cy:s.y, r:15, stroke:`var(--line-${lineId})`}));
-  g.appendChild(el('circle', {class:'pulse', cx:s.x, cy:s.y, r:15, stroke:`var(--line-${lineId})`}));
+  const g = el('g', {class:'pin', 'data-x':s.x, 'data-y':s.y,
+                     transform:`translate(${s.x} ${s.y}) scale(${pinScaleFactor()})`});
+  const pop = el('g', {class:'pin-pop'});
+  pop.appendChild(el('circle', {class:'halo',  cx:0, cy:0, r:27, fill:`var(--line-${lineId})`}));
+  pop.appendChild(el('circle', {class:'pulse', cx:0, cy:0, r:16, stroke:`var(--line-${lineId})`}));
+  pop.appendChild(el('circle', {class:'core',  cx:0, cy:0, r:12, fill:`var(--line-${lineId})`}));
+  const num = el('text', {
+    class:'pin-num', x:0, y:0, dy:'0.36em', 'text-anchor':'middle',
+    fill:`var(--on-${lineId})`,
+  });
+  num.textContent = k + 1;
+  pop.appendChild(num);
+  g.appendChild(pop);
   gHighlight.appendChild(g);
   const lbl = gLabels.querySelector(`.lbl[data-id="${id}"]`);
   if (lbl){ lbl.classList.remove('dimmed'); lbl.classList.add('picked'); }
 }
+/* 落定後：中選線上「未抽中」的站名半透明，讓三站在長線全景下一眼可辨 */
+function semiDimUnpicked(line, pickedIds){
+  const picked = new Set(pickedIds);
+  for (const id of line.stationIds){
+    if (picked.has(id)) continue;
+    gLabels.querySelector(`.lbl[data-id="${id}"]`)?.classList.add('semi');
+  }
+}
+
+let currentResult = null;
 
 function clearResultRow(){
   resultEl.hidden = true;
   picksEl.innerHTML = '';
   drawBtn.textContent = '🎲 抽 站 去 ！';
 }
-function addChip(id, line){
+function addChip(id, line, k){
   resultEl.hidden = false;
   badgeEl.textContent = line.name;
   badgeEl.style.background = `var(--line-${line.id})`;
@@ -824,13 +994,21 @@ function addChip(id, line){
   const s = S[id];
   const li = document.createElement('li');
   li.className = 'pick-chip';
+  li.dataset.id = id;
+  if (state.visited.includes(id)) li.classList.add('visited');
+  const idx = document.createElement('span');
+  idx.className = 'idx';
+  idx.textContent = k + 1;
+  idx.style.background = `var(--line-${line.id})`;
+  idx.style.color = `var(--on-${line.id})`;
   const code = document.createElement('span');
   code.className = 'code';
   code.textContent = s.codes[line.id] ?? Object.values(s.codes)[0];
   const nm = document.createElement('span');
   nm.className = 'nm';
   nm.textContent = s.name;
-  li.append(code, nm);
+  li.append(idx, code, nm);
+  li.addEventListener('click', () => flyToStation(id));
   picksEl.appendChild(li);
   requestAnimationFrame(() => li.classList.add('in'));
 }
@@ -885,14 +1063,19 @@ async function runCeremony(){
         await cwait(50 + Math.pow(h/(hops-1), 2) * (130 + k * 40));
       }
     }
-    pinStation(targetId, line.id);
+    pinStation(targetId, line.id, k);
     buzz(30);
-    addChip(targetId, line);
+    addChip(targetId, line, k);
     if (!skipped) await cwait(250 + k * 80);
   }
   hop.remove();
 
-  /* 收尾：等 sheet 長高後再算 inset → focus 三站框 */
+  /* 收尾：半透明化未抽中站名、記錄歷史、等 sheet 長高後再 focus 三站框 */
+  semiDimUnpicked(line, result.stationIds);
+  currentResult = result;
+  state.history.unshift({ts: Date.now(), line: line.id, stations: [...result.stationIds]});
+  if (state.history.length > 50) state.history.length = 50;
+  Store.save(state);
   srEl.textContent = `抽中${line.name}：${result.stationIds.map(id => S[id].name).join('、')}`;
   const dur = skipped ? 0 : 700;
   requestAnimationFrame(() => {
@@ -925,6 +1108,150 @@ function toast(msg){
   toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2400);
 }
 
+/* --- 已探訪 --- */
+function setVisited(id, on){
+  const has = state.visited.includes(id);
+  if (on && !has) state.visited.push(id);
+  if (!on && has) state.visited = state.visited.filter(v => v !== id);
+  Store.save(state);
+  syncVisitedUI();
+}
+function syncVisitedUI(){
+  const v = new Set(state.visited);
+  for (const li of picksEl.querySelectorAll('.pick-chip'))
+    li.classList.toggle('visited', v.has(li.dataset.id));
+  if (panelHistory.classList.contains('show')) renderHistory();
+}
+function flyToStation(id){
+  const s = S[id];
+  Camera.focusBBox({x:s.x, y:s.y, w:0, h:0}, {maxScale:1.5, remember:false});
+}
+
+/* --- 面板 --- */
+const panelHistory  = document.getElementById('panel-history');
+const panelSettings = document.getElementById('panel-settings');
+function openPanel(p){
+  p.classList.add('show');
+  requestAnimationFrame(() => p.classList.add('in'));
+}
+function closePanel(p){
+  p.classList.remove('in');
+  setTimeout(() => p.classList.remove('show'), 260);
+}
+for (const p of [panelHistory, panelSettings])
+  p.querySelector('[data-close]').addEventListener('click', () => closePanel(p));
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') for (const p of [panelHistory, panelSettings]) closePanel(p);
+});
+
+/* --- 歷史紀錄 --- */
+const histList = document.getElementById('hist-list');
+const histTxt  = document.getElementById('hist-progress-txt');
+const histBar  = document.getElementById('hist-progress-bar');
+function renderHistory(){
+  const v = new Set(state.visited);
+  const total = STATIONS.filter(s => s.enabled !== false).length;
+  const visCount = state.visited.filter(id => S[id]).length;
+  histTxt.textContent = `已探訪 ${visCount} / ${total} 站`;
+  histBar.style.width = total ? (100 * visCount / total) + '%' : '0';
+  histList.innerHTML = '';
+  if (!state.history.length){
+    histList.innerHTML = '<p class="empty-hint">還沒有抽選紀錄——回主畫面抽一次吧！</p>';
+    return;
+  }
+  for (const h of state.history){
+    const line = LINES.find(l => l.id === h.line);
+    const div = document.createElement('div'); div.className = 'h-entry';
+    const meta = document.createElement('div'); meta.className = 'h-meta';
+    const badge = document.createElement('span'); badge.className = 'h-badge';
+    badge.textContent = line?.name ?? h.line;
+    if (line){
+      badge.style.background = `var(--line-${line.id})`;
+      badge.style.color = `var(--on-${line.id})`;
+    }
+    const date = document.createElement('span'); date.className = 'h-date';
+    date.textContent = new Date(h.ts).toLocaleString('zh-TW',
+      {year:'numeric', month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit', hour12:false});
+    meta.append(badge, date);
+    const sts = document.createElement('div'); sts.className = 'h-sts';
+    for (const id of h.stations){
+      const b = document.createElement('button');
+      b.className = 'h-st' + (v.has(id) ? ' visited' : '');
+      b.textContent = S[id]?.name ?? id;
+      b.addEventListener('click', () => setVisited(id, !state.visited.includes(id)));
+      sts.append(b);
+    }
+    div.append(meta, sts);
+    histList.append(div);
+  }
+}
+document.getElementById('btn-clear-history').addEventListener('click', () => {
+  if (!state.history.length || !confirm('確定清除全部抽選紀錄？（已探訪狀態會保留）')) return;
+  state.history = [];
+  Store.save(state);
+  renderHistory();
+  toast('已清除歷史紀錄');
+});
+
+/* --- 設定 --- */
+const segMode = document.getElementById('seg-mode');
+const optExV  = document.getElementById('opt-exclude-visited');
+const optExT  = document.getElementById('opt-exclude-taoyuan');
+const optVib  = document.getElementById('opt-vibrate');
+const optSnd  = document.getElementById('opt-sound');
+function syncSettingsUI(){
+  for (const b of segMode.querySelectorAll('button'))
+    b.classList.toggle('on', b.dataset.mode === state.settings.mode);
+  optExV.checked = state.settings.excludeVisited;
+  optExT.checked = state.settings.excludeTaoyuan;
+  optVib.checked = state.settings.vibrate;
+  optSnd.checked = state.settings.sound;
+  document.getElementById('row-vibrate').style.display = navigator.vibrate ? '' : 'none';
+}
+segMode.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  state.settings.mode = b.dataset.mode;
+  Store.save(state);
+  applyMode();
+  syncSettingsUI();
+});
+optExV.addEventListener('change', () => { state.settings.excludeVisited = optExV.checked; Store.save(state); });
+optExT.addEventListener('change', () => { state.settings.excludeTaoyuan = optExT.checked; Store.save(state); });
+optVib.addEventListener('change', () => { state.settings.vibrate = optVib.checked; Store.save(state); });
+optSnd.addEventListener('change', () => { state.settings.sound = optSnd.checked; Store.save(state); });
+document.getElementById('btn-clear-visited').addEventListener('click', () => {
+  if (!state.visited.length || !confirm('確定清除全部「已探訪」紀錄？')) return;
+  state.visited = [];
+  Store.save(state);
+  syncVisitedUI();
+  toast('已清除已探訪紀錄');
+});
+document.getElementById('btn-clear-all').addEventListener('click', () => {
+  if (!confirm('確定清除全部資料（歷史＋已探訪＋設定）？')) return;
+  try { localStorage.removeItem('tmd.v1'); } catch {}
+  location.reload();
+});
+
+/* --- 分享 --- */
+async function share(){
+  if (!currentResult) return;
+  const line = LINES.find(l => l.id === currentResult.lineId);
+  const names = currentResult.stationIds.map(id => S[id].name).join('、');
+  const text = `【雙北捷運抽站】今天抽中 ${line.name}：${names}！`;
+  const url = 'https://a102304043.github.io/TaipeiMetroDraw/';
+  try {
+    if (navigator.share) await navigator.share({title:'雙北捷運抽站', text, url});
+    else { await navigator.clipboard.writeText(`${text} ${url}`); toast('已複製到剪貼簿'); }
+  } catch {}
+}
+document.getElementById('btn-visit-all').addEventListener('click', () => {
+  if (!currentResult) return;
+  for (const id of currentResult.stationIds) setVisited(id, true);
+  toast('已標記三站為已探訪 ✓');
+});
+document.getElementById('btn-share').addEventListener('click', share);
+
 /* ============================================================
    §9 init
    ============================================================ */
@@ -937,8 +1264,8 @@ if (DEBUG) window.__tmd = { drawResult, LINES, STATIONS, S, state, Camera };  //
 
 document.getElementById('refocus').addEventListener('click', () => Camera.refocus());
 drawBtn.addEventListener('click', runCeremony);
-document.getElementById('btn-history').addEventListener('click', () => toast('歷史紀錄建置中'));
-document.getElementById('btn-settings').addEventListener('click', () => toast('設定建置中'));
+document.getElementById('btn-history').addEventListener('click', () => { renderHistory(); openPanel(panelHistory); });
+document.getElementById('btn-settings').addEventListener('click', () => { syncSettingsUI(); openPanel(panelSettings); });
 
 })();
 </script>
