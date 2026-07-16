@@ -193,8 +193,6 @@ header .spacer{flex:1}
   font-size:.75rem; font-weight:800; color:var(--accent);
   border:1px solid var(--accent); border-radius:999px; padding:2px 8px;
 }
-/* 抽中路線後的下一步列 */
-#line-next{display:flex; gap:8px; margin-top:10px; margin-bottom:12px}
 
 /* ============================================================
    §CSS-6 抽選儀式
@@ -614,9 +612,6 @@ body.intro #intro-title{display:flex; animation:title-out .45s ease 1.5s forward
   <div id="result" hidden>
     <span class="line-badge" id="result-badge"></span>
     <ol class="picks" id="result-picks"></ol>
-    <div id="line-next" hidden>
-      <button class="sub-btn" id="btn-draw-here">🎲 抽這條線的三站</button>
-    </div>
     <div id="result-actions">
       <button class="sub-btn" id="btn-visit-all">✓ 標記三站已探訪</button>
       <button class="sub-btn" id="btn-share">↗ 分享</button>
@@ -1027,6 +1022,7 @@ const Store = (() => {
     version: 2,
     settings: { excludeVisited:true, excludeTaoyuan:false, skin:'classic', mode:'light', sound:false, vibrate:true, tourDone:false, stationHintDone:false },
     lastLine: null,
+    pendingLine: null,   // 已抽路線、尚未抽站＝鎖定中
     visited: [],
     history: [],
   };
@@ -1645,10 +1641,9 @@ function clearResultRow(){
   resultEl.hidden = true;
   picksEl.innerHTML = '';
   briefEl.hidden = false;
-  document.getElementById('line-next').hidden = true;
   document.getElementById('result-actions').style.display = '';
 }
-/* 只抽了路線的結果面板：鎖定線＋「抽這條線的三站」快捷鈕 */
+/* 只抽了路線的結果面板：鎖定提示，下一步就是主按鈕「抽三站」 */
 function showLineResult(line){
   briefEl.hidden = true;
   resultEl.hidden = false;
@@ -1663,10 +1658,9 @@ function showLineResult(line){
   code.textContent = `可抽 ${eligibleStations(line).length} 站`;
   const nm = document.createElement('span');
   nm.className = 'nm';
-  nm.textContent = '路線鎖定！';
+  nm.textContent = '路線鎖定！按下方 🎲 抽三站揭曉';
   li.append(code, nm);
   picksEl.appendChild(li);
-  document.getElementById('line-next').hidden = false;
   document.getElementById('result-actions').style.display = 'none';
 }
 function addChip(id, line, k){
@@ -1734,6 +1728,7 @@ async function runLineCeremony(){
 
   currentResult = null;
   state.lastLine = line.id;
+  state.pendingLine = line.id;
   state.history.unshift({ts: Date.now(), line: line.id, stations: []});
   if (state.history.length > 50) state.history.length = 50;
   Store.save(state);
@@ -1792,6 +1787,7 @@ async function runStationCeremony(lineId){
   semiDimUnpicked(line, picked);
   currentResult = { lineId: line.id, stationIds: picked };
   state.lastLine = line.id;
+  state.pendingLine = null;   // 鎖定解除，下次「抽三站」開放指定
   state.history.unshift({ts: Date.now(), line: line.id, stations: [...picked]});
   if (state.history.length > 50) state.history.length = 50;
   Store.save(state);
@@ -2060,7 +2056,7 @@ document.getElementById('btn-share').addEventListener('click', share);
    ============================================================ */
 const TOUR_STEPS = [
   {t:'🎰🎲 兩種抽法', target:'#draw-row', boost:'#sheet',
-   p:'「抽路線」先抽出今天的線；「抽三站」再從指定的線抽出三個站——分兩次抽，或一路抽到底都行。動畫太久？點畫面任意處直接看結果。'},
+   p:'「抽路線」先抽出並鎖定今天的線；「抽三站」在鎖定時直接開抽、沒鎖定時先選一條線——分兩次抽或一路抽到底都行。動畫太久？點畫面任意處跳過。'},
   {t:'🗺️ 路網圖就是舞台', target:'#refocus', boost:'#refocus',
    p:'地圖可以雙指縮放、單指拖曳。點任何一個站，會打開它的介紹卡：照片、簡介、今日探訪任務與導航。⌖ 回到抽選結果、⛶ 看整張路網圖。'},
   {t:'🕘 收集你的足跡', target:'#btn-history', boost:'header',
@@ -2666,8 +2662,19 @@ document.getElementById('overview').addEventListener('click', () => {
   Camera.focusContent(650);
 });
 lineBtn.addEventListener('click', runLineCeremony);
-stationsBtn.addEventListener('click', openLinePicker);
-document.getElementById('btn-draw-here').addEventListener('click', () => runStationCeremony(state.lastLine));
+/* 抽三站：路線鎖定中→直接抽該線；沒鎖定→開路線選擇器 */
+stationsBtn.addEventListener('click', () => {
+  if (state.pendingLine){
+    const line = LINES.find(l => l.id === state.pendingLine);
+    if (line && eligibleStations(line).length >= 3){
+      runStationCeremony(state.pendingLine);
+      return;
+    }
+    state.pendingLine = null;   // 鎖定的線已不可抽（排除設定變動），回到指定抽
+    Store.save(state);
+  }
+  openLinePicker();
+});
 
 /* 浮動鈕貼齊結果面板頂端（面板長高時不被蓋住） */
 new ResizeObserver(() => {
