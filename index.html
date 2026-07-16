@@ -122,6 +122,74 @@ header .spacer{flex:1}
 }
 #draw-btn:active{transform:scale(.97)}
 
+/* ============================================================
+   §CSS-6 抽選儀式
+   ============================================================ */
+#ceremony{
+  position:fixed; inset:0; z-index:40;
+  display:none; flex-direction:column; align-items:center; justify-content:center;
+  background:color-mix(in srgb, var(--surface) 60%, transparent);
+  backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+}
+#ceremony.show{display:flex}
+#slot{display:flex; flex-direction:column; gap:10px; align-items:center}
+.capsule{
+  min-width:230px; text-align:center;
+  padding:13px 28px; border-radius:999px;
+  font-size:1.25rem; font-weight:800; letter-spacing:.15em;
+  background:var(--card); color:var(--ink);
+  opacity:.3; transform:scale(.88);
+  transition:transform .1s ease, opacity .1s ease;
+}
+.capsule.cur{
+  opacity:1; transform:scale(1); box-shadow:var(--shadow);
+  background:var(--cap-bg, var(--card)); color:var(--cap-fg, var(--ink));
+}
+.capsule.cur.landed{transform:scale(1.15)}
+#ceremony .hint{
+  position:absolute; bottom:calc(140px + env(safe-area-inset-bottom));
+  left:0; right:0; text-align:center;
+  color:var(--ink-2); font-size:.875rem;
+}
+@media (prefers-reduced-motion: reduce){
+  #ceremony{backdrop-filter:none; -webkit-backdrop-filter:none}
+  .capsule{transition:none}
+}
+
+/* 地圖 dim 與釘選高亮 */
+#map .line.dimmed, #map .dot.dimmed, #map .lbl.dimmed{opacity:.15; transition:opacity .3s ease}
+#map .lbl.picked{font-weight:800; font-size:15px}
+#hop-dot{fill:var(--ink); stroke:var(--card); stroke-width:2}
+.pin .ring{fill:none; stroke-width:4}
+.pin .pulse{
+  fill:none; stroke-width:3;
+  transform-box:fill-box; transform-origin:center;
+  animation:pulse 1.6s ease-out infinite;
+}
+@keyframes pulse{from{transform:scale(1); opacity:.9} to{transform:scale(2.6); opacity:0}}
+@media (prefers-reduced-motion: reduce){.pin .pulse{animation:none; opacity:.4}}
+
+/* 結果列（迷你版；完整卡片於 Step 5/7） */
+#result{margin-bottom:12px}
+#result .line-badge{
+  display:inline-block; padding:6px 14px; border-radius:999px;
+  font-weight:800; letter-spacing:.06em; margin-bottom:10px;
+}
+#result .picks{list-style:none; display:flex; gap:8px}
+#result .pick-chip{
+  flex:1; background:var(--surface); border:1px solid var(--hairline);
+  border-radius:12px; padding:10px 6px; text-align:center;
+  opacity:0; transform:translateY(10px);
+  transition:opacity .3s ease, transform .3s ease;
+}
+#result .pick-chip.in{opacity:1; transform:none}
+#result .pick-chip .code{
+  display:block; font-size:.75rem; color:var(--ink-2);
+  font-variant-numeric:tabular-nums; margin-bottom:2px;
+}
+#result .pick-chip .nm{font-weight:600; font-size:1.0625rem}
+.sr-only{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+
 /* 重新對焦浮動鈕 */
 #refocus{
   position:fixed; right:16px;
@@ -169,12 +237,26 @@ header .spacer{flex:1}
 
 <button id="refocus" aria-label="重新對焦" title="重新對焦">⌖</button>
 
+<div id="ceremony" aria-hidden="true">
+  <div id="slot">
+    <div class="capsule" id="cap-prev"></div>
+    <div class="capsule cur" id="cap-cur"></div>
+    <div class="capsule" id="cap-next"></div>
+  </div>
+  <div class="hint">點一下跳過動畫</div>
+</div>
+
 <div id="sheet">
   <div class="handle"></div>
+  <div id="result" hidden>
+    <span class="line-badge" id="result-badge"></span>
+    <ol class="picks" id="result-picks"></ol>
+  </div>
   <button id="draw-btn">🎲 抽 站 去 ！</button>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="sr-announce" class="sr-only" role="status" aria-live="polite"></div>
 
 <script>
 (() => {
@@ -340,10 +422,11 @@ function segToPoints(seg){
    ============================================================ */
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('map');
-const gLines    = document.getElementById('g-lines');
-const gStations = document.getElementById('g-stations');
-const gLabels   = document.getElementById('g-labels');
-const gDebug    = document.getElementById('g-debug');
+const gLines     = document.getElementById('g-lines');
+const gHighlight = document.getElementById('g-highlight');
+const gStations  = document.getElementById('g-stations');
+const gLabels    = document.getElementById('g-labels');
+const gDebug     = document.getElementById('g-debug');
 
 function el(tag, attrs){
   const n = document.createElementNS(SVG_NS, tag);
@@ -496,7 +579,7 @@ const Camera = (() => {
     if (anim){ cancelAnimationFrame(anim); anim = null; }
   }
 
-  function focusBBox(bbox, opts){ animateTo(fitBBox(bbox, opts)); }
+  function focusBBox(bbox, opts = {}){ animateTo(fitBBox(bbox, opts), opts.duration ?? 650); }
   function focusContent(duration){
     measure();
     animateTo(fitBBox(contentBBox()), duration);
@@ -594,6 +677,236 @@ function debugLabels(){
 }
 
 /* ============================================================
+   §6 Picker — 抽線（均勻 1/N）→ 抽三站（partial Fisher-Yates）
+   ============================================================ */
+function eligibleStations(line){
+  return line.stationIds.filter(id => {
+    const s = S[id];
+    if (s.enabled === false) return false;
+    if (state.settings.excludeTaoyuan && s.area?.startsWith('桃園')) return false;
+    if (state.settings.excludeVisited && state.visited.includes(id)) return false;
+    return true;
+  });
+}
+function drawResult(){
+  const pool = LINES.filter(l => eligibleStations(l).length >= 3);
+  if (!pool.length) return null;
+  const line = pool[Math.floor(Math.random() * pool.length)];
+  const ids = eligibleStations(line);
+  for (let i = 0; i < 3; i++){
+    const j = i + Math.floor(Math.random() * (ids.length - i));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  const picked = ids.slice(0, 3);
+  picked.sort((a, b) => line.stationIds.indexOf(a) - line.stationIds.indexOf(b));
+  return { lineId: line.id, stationIds: picked };
+}
+
+function lineBBox(line){
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  for (const seg of line.segments)
+    for (const [x,y] of segToPoints(seg)){
+      x0=Math.min(x0,x); y0=Math.min(y0,y); x1=Math.max(x1,x); y1=Math.max(y1,y);
+    }
+  return {x:x0, y:y0, w:x1-x0, h:y1-y0};
+}
+/* 「該線最外側兩個抽中站之間的所有點＋抽中站」的 bbox（不取整條線） */
+function resultBBox(line, ids){
+  const set = new Set(ids);
+  const pts = [];
+  for (const seg of line.segments){
+    const idxs = seg.map((p,i) => typeof p === 'string' && set.has(p) ? i : -1).filter(i => i >= 0);
+    if (!idxs.length) continue;
+    pts.push(...segToPoints(seg.slice(Math.min(...idxs), Math.max(...idxs) + 1)));
+  }
+  if (!pts.length) for (const id of ids) pts.push([S[id].x, S[id].y]);
+  let x0=Infinity, y0=Infinity, x1=-Infinity, y1=-Infinity;
+  for (const [x,y] of pts){
+    x0=Math.min(x0,x); y0=Math.min(y0,y); x1=Math.max(x1,x); y1=Math.max(y1,y);
+  }
+  return {x:x0, y:y0, w:x1-x0, h:y1-y0};
+}
+
+/* ============================================================
+   §7 Ceremony — 老虎機抽線 → 鏡頭推進 → 光點跳選三站
+   動畫期間點擊任意處＝跳過（使用者輸入永遠贏）
+   ============================================================ */
+const buzz = p => {
+  if (state.settings.vibrate && navigator.vibrate) try { navigator.vibrate(p); } catch {}
+};
+
+let ceremonyActive = false, skipped = false, waitResolvers = [];
+function cwait(ms){
+  return new Promise(res => {
+    if (skipped) return res();
+    const id = setTimeout(() => { waitResolvers = waitResolvers.filter(r => r.id !== id); res(); }, ms);
+    waitResolvers.push({id, res});
+  });
+}
+function requestSkip(){
+  if (!ceremonyActive || skipped) return;
+  skipped = true;
+  Camera.cancelAnim();
+  for (const {id, res} of waitResolvers){ clearTimeout(id); res(); }
+  waitResolvers = [];
+}
+
+const ceremonyEl = document.getElementById('ceremony');
+const caps = {
+  prev: document.getElementById('cap-prev'),
+  cur:  document.getElementById('cap-cur'),
+  next: document.getElementById('cap-next'),
+};
+const drawBtn  = document.getElementById('draw-btn');
+const resultEl = document.getElementById('result');
+const badgeEl  = document.getElementById('result-badge');
+const picksEl  = document.getElementById('result-picks');
+const srEl     = document.getElementById('sr-announce');
+
+function rollSequence(target, n){
+  const seq = [];
+  let last = null;
+  for (let i = 0; i < n - 1; i++){
+    let c;
+    do { c = LINES[Math.floor(Math.random() * LINES.length)]; } while (LINES.length > 1 && c === last);
+    seq.push(c); last = c;
+  }
+  if (LINES.length > 1 && last === target) seq[n-2] = LINES.find(l => l !== target);
+  seq.push(target);
+  return seq;
+}
+function showSlot(seq, i){
+  caps.prev.textContent = seq[i-1]?.name ?? '';
+  caps.next.textContent = seq[i+1]?.name ?? '';
+  caps.cur.textContent  = seq[i].name;
+  caps.cur.style.setProperty('--cap-bg', `var(--line-${seq[i].id})`);
+  caps.cur.style.setProperty('--cap-fg', `var(--on-${seq[i].id})`);
+}
+
+function dimAll(on){
+  for (const g of gLines.querySelectorAll('.line')) g.classList.toggle('dimmed', on);
+  for (const c of gStations.querySelectorAll('.dot')) c.classList.toggle('dimmed', on);
+  for (const t of gLabels.querySelectorAll('.lbl')) t.classList.toggle('dimmed', on);
+}
+function setDims(lineId){
+  const onLine = new Set(LINES.find(l => l.id === lineId).stationIds);
+  for (const g of gLines.querySelectorAll('.line'))
+    g.classList.toggle('dimmed', g.dataset.line !== lineId);
+  for (const c of gStations.querySelectorAll('.dot'))
+    c.classList.toggle('dimmed', !onLine.has(c.parentElement.dataset.id));
+  for (const t of gLabels.querySelectorAll('.lbl'))
+    t.classList.toggle('dimmed', !onLine.has(t.dataset.id));
+}
+function clearPins(){
+  gHighlight.innerHTML = '';
+  for (const t of gLabels.querySelectorAll('.lbl.picked')) t.classList.remove('picked');
+}
+function pinStation(id, lineId){
+  const s = S[id];
+  const g = el('g', {class:'pin'});
+  g.appendChild(el('circle', {class:'ring',  cx:s.x, cy:s.y, r:15, stroke:`var(--line-${lineId})`}));
+  g.appendChild(el('circle', {class:'pulse', cx:s.x, cy:s.y, r:15, stroke:`var(--line-${lineId})`}));
+  gHighlight.appendChild(g);
+  const lbl = gLabels.querySelector(`.lbl[data-id="${id}"]`);
+  if (lbl){ lbl.classList.remove('dimmed'); lbl.classList.add('picked'); }
+}
+
+function clearResultRow(){
+  resultEl.hidden = true;
+  picksEl.innerHTML = '';
+  drawBtn.textContent = '🎲 抽 站 去 ！';
+}
+function addChip(id, line){
+  resultEl.hidden = false;
+  badgeEl.textContent = line.name;
+  badgeEl.style.background = `var(--line-${line.id})`;
+  badgeEl.style.color = `var(--on-${line.id})`;
+  const s = S[id];
+  const li = document.createElement('li');
+  li.className = 'pick-chip';
+  const code = document.createElement('span');
+  code.className = 'code';
+  code.textContent = s.codes[line.id] ?? Object.values(s.codes)[0];
+  const nm = document.createElement('span');
+  nm.className = 'nm';
+  nm.textContent = s.name;
+  li.append(code, nm);
+  picksEl.appendChild(li);
+  requestAnimationFrame(() => li.classList.add('in'));
+}
+
+async function runCeremony(){
+  const result = drawResult();
+  if (!result){
+    toast('沒有可抽的線——排除條件太嚴了，請到設定放寬');
+    return;
+  }
+  const line = LINES.find(l => l.id === result.lineId);
+
+  ceremonyActive = true; skipped = false;
+  drawBtn.disabled = true;
+  clearResultRow(); clearPins(); dimAll(true);
+  Camera.cancelAnim();
+
+  /* 抽線老虎機 */
+  ceremonyEl.classList.add('show');
+  caps.cur.classList.remove('landed');
+  const seq = rollSequence(line, 13);
+  for (let i = 0; i < seq.length && !skipped; i++){
+    showSlot(seq, i);
+    buzz(6);
+    await cwait(55 + Math.pow(i/(seq.length-1), 2.2) * 240);
+  }
+  showSlot([line], 0);
+  caps.cur.classList.add('landed');
+  setDims(line.id);
+  buzz([30, 40, 30]);
+  if (!skipped) await cwait(550);
+  ceremonyEl.classList.remove('show');
+
+  /* 鏡頭推進整條線 */
+  Camera.focusBBox(lineBBox(line), {duration: skipped ? 0 : 800});
+  if (!skipped) await cwait(900);
+
+  /* 光點沿線跳選三站 */
+  const onLine = line.stationIds;
+  const hop = el('circle', {id:'hop-dot', r:9, cx:S[onLine[0]].x, cy:S[onLine[0]].y});
+  gHighlight.appendChild(hop);
+  for (let k = 0; k < 3; k++){
+    const targetId = result.stationIds[k];
+    if (!skipped){
+      const hops = 6 + k;
+      let pos = Math.floor(Math.random() * onLine.length);
+      for (let h = 0; h < hops && !skipped; h++){
+        pos = (pos + 1 + Math.floor(Math.random() * 2)) % onLine.length;
+        const st = S[h === hops - 1 ? targetId : onLine[pos]];
+        hop.setAttribute('cx', st.x); hop.setAttribute('cy', st.y);
+        buzz(4);
+        await cwait(50 + Math.pow(h/(hops-1), 2) * (130 + k * 40));
+      }
+    }
+    pinStation(targetId, line.id);
+    buzz(30);
+    addChip(targetId, line);
+    if (!skipped) await cwait(250 + k * 80);
+  }
+  hop.remove();
+
+  /* 收尾：等 sheet 長高後再算 inset → focus 三站框 */
+  srEl.textContent = `抽中${line.name}：${result.stationIds.map(id => S[id].name).join('、')}`;
+  const dur = skipped ? 0 : 700;
+  requestAnimationFrame(() => {
+    Camera.focusBBox(resultBBox(line, result.stationIds), {duration: dur});
+  });
+  drawBtn.textContent = '🎲 再 抽 一 次';
+  drawBtn.disabled = false;
+  ceremonyActive = false;
+}
+
+ceremonyEl.addEventListener('pointerdown', e => { e.preventDefault(); requestSkip(); });
+document.addEventListener('pointerdown', () => { if (ceremonyActive) requestSkip(); }, true);
+
+/* ============================================================
    §8 UI — 模式套用與 toast
    ============================================================ */
 const state = Store.load();
@@ -618,12 +931,12 @@ function toast(msg){
 applyMode();
 renderMap();
 Camera.init();
-if (new URLSearchParams(location.search).get('debug') === 'labels') debugLabels();
+const DEBUG = new URLSearchParams(location.search).get('debug');
+if (DEBUG === 'labels') debugLabels();
+if (DEBUG) window.__tmd = { drawResult, LINES, STATIONS, S, state, Camera };  // 測試掛鉤
 
 document.getElementById('refocus').addEventListener('click', () => Camera.refocus());
-document.getElementById('draw-btn').addEventListener('click', () => {
-  toast('抽選引擎建置中，敬請期待 🚇');
-});
+drawBtn.addEventListener('click', runCeremony);
 document.getElementById('btn-history').addEventListener('click', () => toast('歷史紀錄建置中'));
 document.getElementById('btn-settings').addEventListener('click', () => toast('設定建置中'));
 
