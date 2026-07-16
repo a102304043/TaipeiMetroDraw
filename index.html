@@ -187,6 +187,7 @@ header .spacer{flex:1}
    dir ＝ 站名 label 的 8 方位
    （目前為試點：文湖線＋板南線；其餘 8 線於 Step 6 補入）
    ============================================================ */
+/* DATA:BEGIN（tools/verify-data.mjs 以此標記抽取驗證） */
 const STATIONS = [
   // --- 文湖線 BR（南段：動物園 → 忠孝復興） ---
   {id:'br01', name:'動物園',       x:1250, y:1375, codes:{BR:'BR01'}, dir:'E'},
@@ -253,6 +254,8 @@ const LINES = [
     'bl16','bl17','bl18','bl19','bl20','bl21','bl22','bl23',
   ]]},
 ];
+
+/* DATA:END */
 
 /* 每線站數 assert（與計畫附錄比對；試點先驗證 BR/BL） */
 const EXPECTED_COUNTS = {BR:24, BL:23};
