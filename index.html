@@ -457,6 +457,139 @@ const STATIONS = [
   {id:'bl20', name:'後山埤',       x:1300, y:800,  codes:{BL:'BL20'}, dir:'N'},
   {id:'bl21', name:'昆陽',         x:1350, y:800,  codes:{BL:'BL21'}, dir:'S'},
   {id:'bl22', name:'南港',         x:1400, y:800,  codes:{BL:'BL22'}, dir:'S'},
+  // --- 淡水信義線 R（東段 y=875/900 → 台北車站 → 北段 x=825 → 北投 → 淡水） ---
+  {id:'r01',  name:'廣慈/奉天宮',  x:1350, y:875,  codes:{R:'R01'}, dir:'E', area:'台北市信義區', enabled:false},
+  {id:'r02',  name:'象山',         x:1275, y:875,  codes:{R:'R02'}, dir:'S'},
+  {id:'r03',  name:'台北101/世貿', x:1200, y:875,  codes:{R:'R03'}, dir:'N'},
+  {id:'r04',  name:'信義安和',     x:1125, y:875,  codes:{R:'R04'}, dir:'S'},
+  {id:'r06',  name:'大安森林公園', x:975,  y:900,  codes:{R:'R06'}, dir:'S'},
+  {id:'r07',  name:'東門',         x:900,  y:900,  codes:{R:'R07', O:'O06'}, dir:'N'},
+  {id:'r08',  name:'中正紀念堂',   x:825,  y:900,  codes:{R:'R08', G:'G10'}, dir:'SW'},
+  {id:'r09',  name:'台大醫院',     x:825,  y:850,  codes:{R:'R09'}, dir:'E'},
+  {id:'r11',  name:'中山',         x:825,  y:725,  codes:{R:'R11', G:'G14'}, dir:'NW'},
+  {id:'r12',  name:'雙連',         x:825,  y:650,  codes:{R:'R12'}, dir:'E'},
+  {id:'r13',  name:'民權西路',     x:825,  y:575,  codes:{R:'R13', O:'O11'}, dir:'W'},
+  {id:'r14',  name:'圓山',         x:825,  y:500,  codes:{R:'R14'}, dir:'E'},
+  {id:'r15',  name:'劍潭',         x:825,  y:450,  codes:{R:'R15'}, dir:'E'},
+  {id:'r16',  name:'士林',         x:825,  y:400,  codes:{R:'R16'}, dir:'E'},
+  {id:'r17',  name:'芝山',         x:775,  y:350,  codes:{R:'R17'}, dir:'E'},
+  {id:'r18',  name:'明德',         x:725,  y:300,  codes:{R:'R18'}, dir:'E'},
+  {id:'r19',  name:'石牌',         x:675,  y:250,  codes:{R:'R19'}, dir:'E'},
+  {id:'r20',  name:'唭哩岸',       x:625,  y:200,  codes:{R:'R20'}, dir:'N'},
+  {id:'r21',  name:'奇岩',         x:550,  y:200,  codes:{R:'R21'}, dir:'N'},
+  {id:'r22',  name:'北投',         x:475,  y:200,  codes:{R:'R22'}, dir:'S'},
+  {id:'r22a', name:'新北投',       x:525,  y:150,  codes:{R:'R22A'}, dir:'N'},
+  {id:'r23',  name:'復興崗',       x:400,  y:200,  codes:{R:'R23'}, dir:'N'},
+  {id:'r24',  name:'忠義',         x:350,  y:200,  codes:{R:'R24'}, dir:'S'},
+  {id:'r25',  name:'關渡',         x:300,  y:200,  codes:{R:'R25'}, dir:'N'},
+  {id:'r26',  name:'竹圍',         x:250,  y:200,  codes:{R:'R26'}, dir:'S'},
+  {id:'r27',  name:'紅樹林',       x:200,  y:200,  codes:{R:'R27', V:'V01'}, dir:'S'},
+  {id:'r28',  name:'淡水',         x:150,  y:150,  codes:{R:'R28'}, dir:'W'},
+  // --- 松山新店線 G（南段 x=825 → 中正紀念堂 → 西門 → 南京東路 y=725） ---
+  {id:'g01',  name:'新店',         x:825,  y:1575, codes:{G:'G01'}, dir:'E'},
+  {id:'g02',  name:'新店區公所',   x:825,  y:1500, codes:{G:'G02'}, dir:'E'},
+  {id:'g03',  name:'七張',         x:825,  y:1425, codes:{G:'G03'}, dir:'E'},
+  {id:'g03a', name:'小碧潭',       x:775,  y:1475, codes:{G:'G03A'}, dir:'S'},
+  {id:'g04',  name:'大坪林',       x:825,  y:1350, codes:{G:'G04', Y:'Y07'}, dir:'E'},
+  {id:'g05',  name:'景美',         x:825,  y:1275, codes:{G:'G05'}, dir:'E'},
+  {id:'g06',  name:'萬隆',         x:825,  y:1200, codes:{G:'G06'}, dir:'E'},
+  {id:'g07',  name:'公館',         x:825,  y:1125, codes:{G:'G07'}, dir:'E'},
+  {id:'g08',  name:'台電大樓',     x:825,  y:1050, codes:{G:'G08'}, dir:'E'},
+  {id:'g09',  name:'古亭',         x:825,  y:975,  codes:{G:'G09', O:'O05'}, dir:'E'},
+  {id:'g11',  name:'小南門',       x:775,  y:850,  codes:{G:'G11'}, dir:'SW'},
+  {id:'g13',  name:'北門',         x:775,  y:775,  codes:{G:'G13'}, dir:'NW'},
+  {id:'g15',  name:'松江南京',     x:975,  y:725,  codes:{G:'G15', O:'O08'}, dir:'NE'},
+  {id:'g17',  name:'台北小巨蛋',   x:1125, y:725,  codes:{G:'G17'}, dir:'S'},
+  {id:'g18',  name:'南京三民',     x:1200, y:725,  codes:{G:'G18'}, dir:'N'},
+  {id:'g19',  name:'松山',         x:1275, y:725,  codes:{G:'G19'}, dir:'E'},
+  // --- 中和新蘆線 O（南勢角 45° → 古亭 → 東門 → x=975 → 民權西路 → 大橋頭分岔） ---
+  {id:'o01',  name:'南勢角',       x:525,  y:1275, codes:{O:'O01'}, dir:'W'},
+  {id:'o02',  name:'景安',         x:600,  y:1200, codes:{O:'O02', Y:'Y11'}, dir:'E'},
+  {id:'o03',  name:'永安市場',     x:675,  y:1125, codes:{O:'O03'}, dir:'E'},
+  {id:'o04',  name:'頂溪',         x:750,  y:1050, codes:{O:'O04'}, dir:'E'},
+  {id:'o09',  name:'行天宮',       x:975,  y:650,  codes:{O:'O09'}, dir:'E'},
+  {id:'o10',  name:'中山國小',     x:975,  y:600,  codes:{O:'O10'}, dir:'E'},
+  {id:'o12',  name:'大橋頭',       x:750,  y:500,  codes:{O:'O12'}, dir:'NE'},
+  {id:'o13',  name:'台北橋',       x:700,  y:550,  codes:{O:'O13'}, dir:'SE'},
+  {id:'o14',  name:'菜寮',         x:650,  y:600,  codes:{O:'O14'}, dir:'SE'},
+  {id:'o15',  name:'三重',         x:600,  y:650,  codes:{O:'O15', A:'A2'}, dir:'S'},
+  {id:'o16',  name:'先嗇宮',       x:550,  y:700,  codes:{O:'O16'}, dir:'SE'},
+  {id:'o17',  name:'頭前庄',       x:500,  y:750,  codes:{O:'O17', Y:'Y18'}, dir:'E'},
+  {id:'o18',  name:'新莊',         x:450,  y:800,  codes:{O:'O18'}, dir:'SE'},
+  {id:'o19',  name:'輔大',         x:400,  y:850,  codes:{O:'O19'}, dir:'SE'},
+  {id:'o20',  name:'丹鳳',         x:350,  y:900,  codes:{O:'O20'}, dir:'SE'},
+  {id:'o21',  name:'迴龍',         x:300,  y:950,  codes:{O:'O21'}, dir:'S'},
+  {id:'o50',  name:'三重國小',     x:700,  y:450,  codes:{O:'O50'}, dir:'NE'},
+  {id:'o51',  name:'三和國中',     x:650,  y:400,  codes:{O:'O51'}, dir:'NE'},
+  {id:'o52',  name:'徐匯中學',     x:600,  y:350,  codes:{O:'O52'}, dir:'NE'},
+  {id:'o53',  name:'三民高中',     x:550,  y:300,  codes:{O:'O53'}, dir:'NE'},
+  {id:'o54',  name:'蘆洲',         x:500,  y:250,  codes:{O:'O54'}, dir:'W'},
+  // --- 環狀線 Y（大坪林 → 十四張 → x=600 北上 → 板橋 → x=500 北上 → 新北產業園區） ---
+  {id:'y08',  name:'十四張',       x:775,  y:1400, codes:{Y:'Y08', K:'K09'}, dir:'NW'},
+  {id:'y09',  name:'秀朗橋',       x:700,  y:1400, codes:{Y:'Y09'}, dir:'S'},
+  {id:'y10',  name:'景平',         x:600,  y:1300, codes:{Y:'Y10'}, dir:'E'},
+  {id:'y12',  name:'中和',         x:600,  y:1125, codes:{Y:'Y12'}, dir:'E'},
+  {id:'y13',  name:'橋和',         x:600,  y:1050, codes:{Y:'Y13'}, dir:'E'},
+  {id:'y14',  name:'中原',         x:550,  y:1000, codes:{Y:'Y14'}, dir:'SE'},
+  {id:'y15',  name:'板新',         x:500,  y:950,  codes:{Y:'Y15'}, dir:'SE'},
+  {id:'y17',  name:'新埔民生',     x:500,  y:825,  codes:{Y:'Y17'}, dir:'E'},
+  {id:'y19',  name:'幸福',         x:500,  y:675,  codes:{Y:'Y19'}, dir:'W'},
+  {id:'y20',  name:'新北產業園區', x:500,  y:600,  codes:{Y:'Y20', A:'A3'}, dir:'NE'},
+  // --- 機場捷運 A（台北車站 → 三重 → 新北產業園區 → 泰山貴和 → 桃園段 45° 長斜線） ---
+  {id:'a04',  name:'新莊副都心',   x:450,  y:550,  codes:{A:'A4'}, dir:'NE'},
+  {id:'a05',  name:'泰山',         x:400,  y:500,  codes:{A:'A5'}, dir:'NE'},
+  {id:'a06',  name:'泰山貴和',     x:350,  y:450,  codes:{A:'A6'}, dir:'NE'},
+  {id:'a07',  name:'體育大學',     x:300,  y:500,  codes:{A:'A7'}, dir:'SE', area:'桃園市龜山區'},
+  {id:'a08',  name:'長庚醫院',     x:250,  y:550,  codes:{A:'A8'}, dir:'SE', area:'桃園市龜山區'},
+  {id:'a09',  name:'林口',         x:200,  y:600,  codes:{A:'A9'}, dir:'SE', area:'桃園市龜山區'},
+  {id:'a10',  name:'山鼻',         x:150,  y:650,  codes:{A:'A10'}, dir:'SE', area:'桃園市蘆竹區'},
+  {id:'a11',  name:'坑口',         x:100,  y:700,  codes:{A:'A11'}, dir:'SE', area:'桃園市蘆竹區'},
+  {id:'a12',  name:'機場第一航廈', x:50,   y:750,  codes:{A:'A12'}, dir:'SE', area:'桃園市大園區'},
+  {id:'a13',  name:'機場第二航廈', x:0,    y:800,  codes:{A:'A13'}, dir:'SE', area:'桃園市大園區'},
+  {id:'a14a', name:'機場旅館',     x:-50,  y:850,  codes:{A:'A14a'}, dir:'SE', area:'桃園市大園區'},
+  {id:'a15',  name:'大園',         x:-100, y:900,  codes:{A:'A15'}, dir:'SE', area:'桃園市大園區'},
+  {id:'a16',  name:'橫山',         x:-150, y:950,  codes:{A:'A16'}, dir:'SE', area:'桃園市大園區'},
+  {id:'a17',  name:'領航',         x:-200, y:1000, codes:{A:'A17'}, dir:'SE', area:'桃園市大園區'},
+  {id:'a18',  name:'高鐵桃園站',   x:-250, y:1050, codes:{A:'A18'}, dir:'SE', area:'桃園市中壢區'},
+  {id:'a19',  name:'桃園體育園區', x:-300, y:1100, codes:{A:'A19'}, dir:'SE', area:'桃園市中壢區'},
+  {id:'a20',  name:'興南',         x:-350, y:1150, codes:{A:'A20'}, dir:'SE', area:'桃園市中壢區'},
+  {id:'a21',  name:'環北',         x:-400, y:1200, codes:{A:'A21'}, dir:'SE', area:'桃園市中壢區'},
+  {id:'a22',  name:'老街溪',       x:-450, y:1250, codes:{A:'A22'}, dir:'S',  area:'桃園市中壢區'},
+  // --- 淡海輕軌 V（紅樹林 x=200 北上 → y=-50 西行 → 崁頂；藍海線自濱海沙崙南下） ---
+  {id:'v02',  name:'竿蓁林',       x:200,  y:150,  codes:{V:'V02'}, dir:'E'},
+  {id:'v03',  name:'淡金鄧公',     x:200,  y:100,  codes:{V:'V03'}, dir:'E'},
+  {id:'v04',  name:'淡江大學',     x:200,  y:50,   codes:{V:'V04'}, dir:'E'},
+  {id:'v05',  name:'淡金北新',     x:200,  y:0,    codes:{V:'V05'}, dir:'E'},
+  {id:'v06',  name:'新市一路',     x:150,  y:-50,  codes:{V:'V06'}, dir:'N'},
+  {id:'v07',  name:'淡水行政中心', x:100,  y:-50,  codes:{V:'V07'}, dir:'S'},
+  {id:'v08',  name:'濱海義山',     x:50,   y:-50,  codes:{V:'V08'}, dir:'N'},
+  {id:'v09',  name:'濱海沙崙',     x:0,    y:-50,  codes:{V:'V09'}, dir:'NW'},
+  {id:'v10',  name:'淡海新市鎮',   x:-50,  y:-50,  codes:{V:'V10'}, dir:'S'},
+  {id:'v11',  name:'崁頂',         x:-100, y:-50,  codes:{V:'V11'}, dir:'W'},
+  {id:'v28',  name:'台北海洋大學', x:0,    y:0,    codes:{V:'V28'}, dir:'E'},
+  {id:'v27',  name:'沙崙',         x:0,    y:50,   codes:{V:'V27'}, dir:'E'},
+  {id:'v26',  name:'漁人碼頭',     x:0,    y:100,  codes:{V:'V26'}, dir:'E'},
+  // --- 安坑輕軌 K（雙城 → 十四張 45° 長斜線） ---
+  {id:'k01',  name:'雙城',         x:375,  y:1800, codes:{K:'K01'}, dir:'S'},
+  {id:'k02',  name:'玫瑰中國城',   x:425,  y:1750, codes:{K:'K02'}, dir:'SE'},
+  {id:'k03',  name:'台北小城',     x:475,  y:1700, codes:{K:'K03'}, dir:'SE'},
+  {id:'k04',  name:'耕莘安康院區', x:525,  y:1650, codes:{K:'K04'}, dir:'SE'},
+  {id:'k05',  name:'景文科大',     x:575,  y:1600, codes:{K:'K05'}, dir:'SE'},
+  {id:'k06',  name:'安康',         x:625,  y:1550, codes:{K:'K06'}, dir:'SE'},
+  {id:'k07',  name:'陽光運動公園', x:675,  y:1500, codes:{K:'K07'}, dir:'SE'},
+  {id:'k08',  name:'新和國小',     x:725,  y:1450, codes:{K:'K08'}, dir:'SE'},
+  // --- 三鶯線 LB（頂埔 → 45° 西南 → 臺北大學轉西 → 鶯歌 → 鶯桃福德） ---
+  {id:'lb02', name:'媽祖田',       x:150,  y:1250, codes:{LB:'LB02'}, dir:'SE'},
+  {id:'lb03', name:'長壽山',       x:100,  y:1300, codes:{LB:'LB03'}, dir:'SE'},
+  {id:'lb04', name:'橫溪',         x:50,   y:1350, codes:{LB:'LB04'}, dir:'SE'},
+  {id:'lb05', name:'龍埔',         x:0,    y:1400, codes:{LB:'LB05'}, dir:'SE'},
+  {id:'lb06', name:'三峽',         x:-50,  y:1450, codes:{LB:'LB06'}, dir:'SE'},
+  {id:'lb07', name:'臺北大學',     x:-100, y:1500, codes:{LB:'LB07'}, dir:'SE'},
+  {id:'lb08', name:'鶯歌車站',     x:-175, y:1500, codes:{LB:'LB08'}, dir:'S'},
+  {id:'lb09', name:'陶瓷老街',     x:-250, y:1500, codes:{LB:'LB09'}, dir:'S'},
+  {id:'lb10', name:'國華',         x:-325, y:1450, codes:{LB:'LB10'}, dir:'SW'},
+  {id:'lb11', name:'永吉公園',     x:-375, y:1400, codes:{LB:'LB11'}, dir:'SW'},
+  {id:'lb12', name:'鶯桃福德',     x:-425, y:1350, codes:{LB:'LB12'}, dir:'W'},
 ];
 
 /* segments 元素：station id 或 [x,y] 純轉折點 */
@@ -466,20 +599,61 @@ const LINES = [
     'g16','br12','br13','br14','br15','br16','br17','br18',[1425,475],
     'br19','br20','br21','br22','br23','bl23',
   ]]},
+  {id:'R', name:'淡水信義線', width:9, segments:[
+    ['r01','r02','r03','r04','r05',[1025,900],'r06','r07','r08','r09','r10',
+     'r11','r12','r13','r14','r15','r16','r17','r18','r19','r20',
+     'r21','r22','r23','r24','r25','r26','r27','r28'],
+    ['r22','r22a'],
+  ]},
+  {id:'G', name:'松山新店線', width:9, segments:[
+    ['g01','g02','g03','g04','g05','g06','g07','g08','g09','r08',
+     'g11',[750,825],'g12','g13','r11','g15','g16','g17','g18','g19'],
+    ['g03','g03a'],
+  ]},
+  {id:'O', name:'中和新蘆線', width:9, segments:[
+    ['o01','o02','o03','o04','g09','r07',[975,825],'o07','g15','o09','o10',
+     [950,575],'r13','o12','o13','o14','o15','o16','o17','o18','o19','o20','o21'],
+    ['o12','o50','o51','o52','o53','o54'],
+  ]},
   {id:'BL', name:'板南線', width:9, segments:[[
     'bl01','bl02','bl03','bl04','bl05','bl06','bl07','bl08','bl09',
     'bl10','g12','r10','bl13','o07','br10',
     'bl16','bl17','bl18','bl19','bl20','bl21','bl22','bl23',
   ]]},
+  {id:'Y', name:'環狀線', width:9, segments:[[
+    'g04','y08','y09',[600,1400],'y10','o02','y12','y13','y14','y15',
+    'bl07','y17','o17','y19','y20',
+  ]]},
+  {id:'A', name:'機場捷運', width:6, segments:[[
+    'r10',[675,650],'o15',[550,600],'y20','a04','a05','a06',
+    'a07','a08','a09','a10','a11','a12','a13','a14a','a15','a16',
+    'a17','a18','a19','a20','a21','a22',
+  ]]},
+  {id:'V', name:'淡海輕軌', width:6, segments:[
+    ['r27','v02','v03','v04','v05',[200,-50],'v06','v07','v08','v09','v10','v11'],
+    ['v09','v28','v27','v26'],
+  ]},
+  {id:'K', name:'安坑輕軌', width:6, segments:[[
+    'k01','k02','k03','k04','k05','k06','k07','k08','y08',
+  ]]},
+  {id:'LB', name:'三鶯線', width:6, segments:[[
+    'bl01','lb02','lb03','lb04','lb05','lb06','lb07','lb08','lb09',
+    [-275,1500],'lb10','lb11','lb12',
+  ]]},
 ];
 
 /* DATA:END */
 
-/* 每線站數 assert（與計畫附錄比對；試點先驗證 BR/BL） */
-const EXPECTED_COUNTS = {BR:24, BL:23};
+/* 每線站數 assert（與計畫附錄查證清單比對） */
+const EXPECTED_COUNTS = {BR:24, R:28, G:20, O:26, BL:23, Y:14, A:22, V:14, K:9, LB:12};
 
 /* --- 派生資料（init 一次） --- */
 const S = Object.fromEntries(STATIONS.map(s => [s.id, s]));
+for (const line of LINES){
+  // 未通車站（enabled:false，如 R01）不入線、不渲染；通車後改 flag 即上架
+  line.segments = line.segments.map(
+    seg => seg.filter(p => typeof p !== 'string' || S[p]?.enabled !== false));
+}
 for (const line of LINES){
   const ids = [];
   for (const seg of line.segments)

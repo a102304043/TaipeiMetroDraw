@@ -10,6 +10,13 @@ const html = readFileSync(join(root, 'index.html'), 'utf-8');
 const m = html.match(/\/\* DATA:BEGIN[\s\S]*?\*\/([\s\S]*?)\/\* DATA:END \*\//);
 if (!m) { console.error('找不到 DATA:BEGIN/END 標記'); process.exit(1); }
 const { STATIONS, LINES } = new Function(m[1] + '; return { STATIONS, LINES };')();
+// 與 app 相同的未通車站過濾（enabled:false 不入線）
+{
+  const byId = Object.fromEntries(STATIONS.map(s => [s.id, s]));
+  for (const line of LINES)
+    line.segments = line.segments.map(
+      seg => seg.filter(p => typeof p !== 'string' || byId[p]?.enabled !== false));
+}
 
 /* ============ Canonical：官方站名順序（計畫附錄，2026-07-16 查證） ============ */
 // 每線一或多個 segment；segment = 依行駛方向的站名序列
